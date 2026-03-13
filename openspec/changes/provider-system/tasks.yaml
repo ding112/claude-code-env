@@ -1,0 +1,198 @@
+id: tasks
+changeId: provider-system
+name: Tasks - Provider System Implementation
+content: |
+  ## Phase 1: 基础架构 (Foundation)
+
+  ### Task 1.1: 类型定义
+  - **文件**: `src/types/index.ts`
+  - **内容**:
+    - [ ] 添加 `Provider` 接口
+    - [ ] 添加新的简化 `Profile` 接口
+    - [ ] 添加 `ProviderType` 类型
+    - [ ] 添加验证错误类型 `ValidationError`
+  - **验收标准**: 类型定义完整，通过 TypeScript 编译
+
+  ### Task 1.2: Provider 核心模块
+  - **文件**: `src/core/provider.ts` (新建)
+  - **内容**:
+    - [ ] `listProviders()`: 读取 `~/.config/cce/providers/*.json`
+    - [ ] `getProvider(name)`: 读取单个 provider
+    - [ ] `saveProvider(provider)`: 写入 provider 文件
+    - [ ] `deleteProvider(name)`: 删除 provider 文件
+    - [ ] `validateProvider(data)`: 验证 provider 数据完整性
+    - [ ] `isProviderInUse(name)`: 检查是否有 profile 引用
+  - **验收标准**: 所有函数有单元测试，错误处理完善
+
+  ### Task 1.3: Profile 核心模块（重构）
+  - **文件**: `src/core/profile.ts` (重写)
+  - **内容**:
+    - [ ] 新的 `listProfiles()`: 只读取新格式 profile
+    - [ ] 新的 `getProfile(name)`: 读取并验证新格式
+    - [ ] 新的 `saveProfile(profile)`: 保存新格式
+    - [ ] 新的 `deleteProfile(name)`: 删除 profile
+    - [ ] 新的 `validateProfile(data, providers)`: 验证 provider 引用存在
+    - [ ] 新的 `resolveConfig(profile, provider)`: 合并配置
+  - **验收标准**: 与旧代码完全隔离，通过单元测试
+
+  ---
+
+  ## Phase 2: CLI 命令实现
+
+  ### Task 2.1: Provider 命令集
+  - **文件**: `src/commands/provider.ts` (新建)
+  - **内容**:
+    - [ ] `providerAddCommand(type)`:
+      - 火山引擎专用交互流程
+      - 通用 provider 交互流程
+      - 调用 `validateProvider` 验证
+    - [ ] `providerListCommand()`: 表格展示 providers
+    - [ ] `providerShowCommand(name)`: 详情展示
+    - [ ] `providerEditCommand(name)`: 打开编辑器
+    - [ ] `providerRemoveCommand(name)`: 删除前检查 `isProviderInUse`
+  - **验收标准**: 所有命令可交互使用，有完整错误处理
+
+  ### Task 2.2: Profile 命令重构
+  - **文件**: 多个命令文件
+  - **内容**:
+    - [ ] `src/commands/create.ts` (重写):
+      - 移除 type 选择
+      - 交互式选择 provider
+      - 可选 model 覆盖
+    - [ ] `src/commands/edit.ts` (重写):
+      - 只支持修改 description 和 model
+      - 简化编辑器界面
+    - [ ] `src/commands/list.ts` (更新):
+      - 新格式展示（显示 provider 引用）
+    - [ ] `src/commands/show.ts` (更新):
+      - 新格式展示
+    - [ ] `src/commands/remove.ts` (更新):
+      - 确认提示更新
+  - **验收标准**: 所有命令工作正常，输出格式正确
+
+  ### Task 2.3: 激活与诊断命令
+  - **文件**: 多个核心和命令文件
+  - **内容**:
+    - [ ] `src/core/switch.ts` (重写):
+      - 新的 `switchProfile()` 函数
+      - 同时配置 Claude Code 和 OpenCode
+      - 统一的错误处理
+    - [ ] `src/core/configGenerator.ts` (新建):
+      - `generateClaudeConfig(profile, provider)`
+      - `generateOpencodeConfig(profile, provider)`
+    - [ ] `src/commands/use.ts` (更新):
+      - 适配新的 switchProfile
+    - [ ] `src/commands/current.ts` (更新):
+      - 新格式展示
+    - [ ] `src/commands/doctor.ts` (更新):
+      - 添加 Provider 配置验证
+      - 验证 Profile 引用的 Provider 存在
+  - **验收标准**: 激活流程完整工作，诊断命令正确识别问题
+
+  ---
+
+  ## Phase 3: 入口与集成
+
+  ### Task 3.1: CLI 入口更新
+  - **文件**: `src/index.ts`
+  - **内容**:
+    - [ ] 导入 provider 命令
+    - [ ] 注册 provider 子命令
+    - [ ] 更新 profile 命令描述
+    - [ ] 移除 type 相关选项
+  - **验收标准**: 所有命令在 help 中正确显示，可正常调用
+
+  ### Task 3.2: 目录初始化
+  - **文件**: `src/core/config.ts`
+  - **内容**:
+    - [ ] 添加 `providers/` 目录初始化
+    - [ ] 确保目录结构完整
+  - **验收标准**: 首次运行时自动创建 providers 目录
+
+  ---
+
+  ## Phase 4: 测试
+
+  ### Task 4.1: 单元测试
+  - **文件**: 多个测试文件
+  - **内容**:
+    - [ ] `tests/core/provider.test.ts`:
+      - [ ] Provider CRUD 测试
+      - [ ] Provider 验证测试
+      - [ ] Provider 引用检查测试
+    - [ ] `tests/core/profile.test.ts`:
+      - [ ] 新 Profile CRUD 测试
+      - [ ] Profile 配置合并测试
+      - [ ] Profile 验证测试
+    - [ ] `tests/core/configGenerator.test.ts`:
+      - [ ] Claude 配置生成测试
+      - [ ] OpenCode 配置生成测试
+  - **验收标准**: 所有测试通过，覆盖率 > 80%
+
+  ### Task 4.2: 集成测试
+  - **文件**: 多个测试文件
+  - **内容**:
+    - [ ] `tests/integration/provider-flow.test.ts`:
+      - [ ] 完整 Provider 生命周期测试
+    - [ ] `tests/integration/profile-flow.test.ts`:
+      - [ ] 完整 Profile 生命周期测试
+    - [ ] `tests/integration/switch-flow.test.ts`:
+      - [ ] 激活流程测试
+    - [ ] `tests/integration/volcano.test.ts`:
+      - [ ] 火山引擎专用流程测试
+  - **验收标准**: 所有测试通过，覆盖主要用户场景
+
+  ---
+
+  ## 任务依赖图
+
+  ```
+  1.1 类型定义 ─────────────────────────────────────┐
+      │                                              │
+      ▼                                              │
+  1.2 Provider 核心 ◀───────────────────────────────┤
+      │                                              │
+      ▼                                              │
+  1.3 Profile 核心 ─────────────────────────────────┤
+      │         │                                    │
+      │         ▼                                    │
+      │    3.2 目录初始化                             │
+      │                                              │
+      ▼                                              │
+  2.1 Provider 命令 ◀────────────────────────────────┤
+      │                                              │
+      ▼                                              │
+  2.2 Profile 命令 ─────────────────────────────────┤
+      │                                              │
+      ▼                                              │
+  2.3 激活与诊断 ────────────────────────────────────┤
+      │                                              │
+      ▼                                              │
+  3.1 CLI 入口 ◀─────────────────────────────────────┘
+      │
+      ▼
+  4.1 单元测试 ─────┐
+      │             │
+      ▼             ▼
+  4.2 集成测试 ─────┘
+  ```
+
+  ---
+
+  ## 时间估算
+
+  | 阶段 | 任务数 | 预计时间 | 优先级 |
+  |-----|-------|---------|-------|
+  | 阶段 1: 基础架构 | 3 | 8-11 小时 | P0 |
+  | 阶段 2: CLI 命令 | 3 | 17-22 小时 | P0 |
+  | 阶段 3: 入口与集成 | 2 | 3 小时 | P0 |
+  | 阶段 4: 测试 | 2 | 14-18 小时 | P1 |
+  | **总计** | **12** | **42-54 小时** | |
+
+  ## 里程碑
+
+  - **M1 (阶段 1 完成)**: 可以 CRUD Provider 和 Profile
+  - **M2 (阶段 2 完成)**: 所有 CLI 命令可用
+  - **M3 (阶段 3 完成)**: 可以激活 Profile 并配置工具
+  - **M4 (阶段 4 完成)**: 所有测试通过，可以发布
+

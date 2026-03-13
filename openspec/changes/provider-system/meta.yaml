@@ -1,0 +1,20 @@
+id: provider-system
+name: Provider System
+status: active
+artifacts:
+  - id: proposal
+    name: Proposal
+    status: completed
+  - id: spec
+    name: Specification
+    status: completed
+    dependsOn: [proposal]
+  - id: design
+    name: Design
+    status: completed
+    dependsOn: [spec]
+  - id: tasks
+    name: Tasks
+    status: completed
+    dependsOn: [design]
+createdAt: '2025-02-16T11:15:00Z'

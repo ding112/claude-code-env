@@ -1,0 +1,60 @@
+{
+  "name": "@mengzai1/cce",
+  "version": "1.0.1",
+  "description": "Claude Code 配置切换工具 - 管理多个 API Provider/Profile 并快速切换",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "cce": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "webui",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "config",
+    "switcher",
+    "cli",
+    "anthropic",
+    "api",
+    "provider",
+    "profile"
+  ],
+  "author": "mengzai1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ding112/claude-code-env.git"
+  },
+  "homepage": "https://github.com/ding112/claude-code-env#readme",
+  "bugs": {
+    "url": "https://github.com/ding112/claude-code-env/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "express": "^5.2.1",
+    "inquirer": "^8.2.6",
+    "open": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/inquirer": "^8.2.10",
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,365 @@
+import path from 'path';
+import express from 'express';
+import { logger } from '../utils/logger.js';
+import { listProfiles, getProfile, saveProfile, deleteProfile, getActiveProfile } from './profile.js';
+import { listProviders, getProvider } from './provider.js';
+import { switchProfile } from './switch.js';
+import type { Profile, Provider } from '../types/index.js';
+
+// WebUI 静态文件目录
+const WEBUI_DIR = path.resolve(__dirname, '..', '..', 'webui');
+
+/**
+ * 过滤 Provider 敏感字段，返回安全的 Provider 信息
+ */
+function sanitizeProvider(provider: Provider) {
+  return {
+    name: provider.name,
+    displayName: provider.displayName,
+    type: provider.type,
+    baseURL: provider.baseURL,
+    models: provider.models,
+    defaultModel: provider.defaultModel,
+    createdAt: provider.createdAt,
+    updatedAt: provider.updatedAt,
+  };
+}
+
+export interface WebUIServerOptions {
+  port?: number;
+  open?: boolean;
+}
+
+export async function startWebUI(options: WebUIServerOptions = {}): Promise<void> {
+  const port = options.port || 3456;
+  const app = express();
+
+  // 中间件
+  app.use(express.json());
+  app.use(express.static(WEBUI_DIR));
+
+  // ============================================================================
+  // API Routes
+  // ============================================================================
+
+  // 获取所有 profiles
+  app.get('/api/profiles', async (req, res) => {
+    try {
+      const profiles = await listProfiles();
+      const activeName = await getActiveProfile();
+      const providers = await listProviders();
+
+      // 为每个 profile 添加详细信息
+      const enrichedProfiles = await Promise.all(
+        profiles.map(async (profile) => {
+          const provider = providers.find(p => p.name === profile.provider);
+          const isActive = profile.name === activeName;
+
+          return {
+            ...profile,
+            isActive,
+            providerDisplayName: provider?.displayName || profile.provider,
+            providerType: provider?.type || 'unknown',
+            defaultModel: provider?.defaultModel,
+            availableModels: provider?.models || [],
+          };
+        })
+      );
+
+      res.json({ profiles: enrichedProfiles });
+    } catch (error) {
+      logger.error('获取 profiles 失败', error);
+      res.status(500).json({ error: '获取配置列表失败' });
+    }
+  });
+
+  // 获取当前激活的 profile
+  app.get('/api/current', async (req, res) => {
+    try {
+      const activeName = await getActiveProfile();
+
+      if (!activeName) {
+        res.json({ active: null, profile: null });
+        return;
+      }
+
+      const profile = await getProfile(activeName);
+
+      if (!profile) {
+        res.json({ active: activeName, profile: null });
+        return;
+      }
+
+      const provider = await getProvider(profile.provider);
+      const model = profile.model || provider?.defaultModel || '';
+
+      res.json({
+        active: activeName,
+        profile: {
+          ...profile,
+          providerDisplayName: provider?.displayName || profile.provider,
+          model,
+        },
+      });
+    } catch (error) {
+      logger.error('获取当前配置失败', error);
+      res.status(500).json({ error: '获取当前配置失败' });
+    }
+  });
+
+  // 获取单个 profile 详情
+  app.get('/api/profiles/:name', async (req, res) => {
+    try {
+      const profile = await getProfile(req.params.name);
+
+      if (!profile) {
+        res.status(404).json({ error: `Profile '${req.params.name}' 不存在` });
+        return;
+      }
+
+      const provider = await getProvider(profile.provider);
+
+      res.json({
+        ...profile,
+        providerDisplayName: provider?.displayName || profile.provider,
+        providerType: provider?.type || 'unknown',
+        defaultModel: provider?.defaultModel,
+        availableModels: provider?.models || [],
+      });
+    } catch (error) {
+      logger.error('获取 profile 详情失败', error);
+      res.status(500).json({ error: '获取配置详情失败' });
+    }
+  });
+
+  // 创建 profile
+  app.post('/api/profiles', async (req, res) => {
+    try {
+      const { name, description, provider, model, useNow } = req.body;
+
+      if (!name || !provider) {
+        res.status(400).json({ error: 'name 和 provider 为必填项' });
+        return;
+      }
+
+      // 验证名称格式，防止路径遍历攻击
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+        res.status(400).json({ error: '名称只能包含字母、数字、下划线和连字符' });
+        return;
+      }
+
+      // 验证名称长度
+      if (name.length > 64) {
+        res.status(400).json({ error: '名称长度不能超过64个字符' });
+        return;
+      }
+
+      // 验证描述长度
+      if (description && description.length > 256) {
+        res.status(400).json({ error: '描述长度不能超过256个字符' });
+        return;
+      }
+
+      // 验证模型名称长度
+      if (model && model.length > 128) {
+        res.status(400).json({ error: '模型名称长度不能超过128个字符' });
+        return;
+      }
+
+      // 检查是否已存在
+      const existing = await getProfile(name);
+      if (existing) {
+        res.status(400).json({ error: `Profile '${name}' 已存在` });
+        return;
+      }
+
+      // 验证 provider 是否存在
+      const providerData = await getProvider(provider);
+      if (!providerData) {
+        res.status(400).json({ error: `Provider '${provider}' 不存在` });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const profile: Profile = {
+        name,
+        description,
+        provider,
+        model: model || undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await saveProfile(profile);
+
+      // 如果需要立即启用
+      if (useNow) {
+        await switchProfile(name, { quiet: true });
+      }
+
+      res.json({ created: name, used: useNow });
+    } catch (error) {
+      logger.error('创建 profile 失败', error);
+      const message = error instanceof Error ? error.message : '创建失败';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 更新 profile
+  app.put('/api/profiles/:name', async (req, res) => {
+    try {
+      const oldName = req.params.name;
+      const { name, description, provider, model } = req.body;
+
+      const existing = await getProfile(oldName);
+      if (!existing) {
+        res.status(404).json({ error: `Profile '${oldName}' 不存在` });
+        return;
+      }
+
+      // 如果更改了 provider，验证新 provider 是否存在
+      if (provider && provider !== existing.provider) {
+        const providerData = await getProvider(provider);
+        if (!providerData) {
+          res.status(400).json({ error: `Provider '${provider}' 不存在` });
+          return;
+        }
+      }
+
+      // 如果更改了名称，需要删除旧文件
+      if (name && name !== oldName) {
+        const newNameExists = await getProfile(name);
+        if (newNameExists) {
+          res.status(400).json({ error: `Profile '${name}' 已存在` });
+          return;
+        }
+        await deleteProfile(oldName);
+      }
+
+      const updatedProfile: Profile = {
+        name: name || oldName,
+        description: description ?? existing.description,
+        provider: provider || existing.provider,
+        model: model ?? existing.model,
+        createdAt: existing.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveProfile(updatedProfile);
+
+      // 如果更改了名称且是当前激活的 profile，更新 active 文件
+      const activeName = await getActiveProfile();
+      if (activeName === oldName && name && name !== oldName) {
+        const { setActiveProfile } = await import('./profile.js');
+        await setActiveProfile(name);
+      }
+
+      res.json({ updated: updatedProfile.name });
+    } catch (error) {
+      logger.error('更新 profile 失败', error);
+      const message = error instanceof Error ? error.message : '更新失败';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 删除 profile
+  app.delete('/api/profiles/:name', async (req, res) => {
+    try {
+      const name = req.params.name;
+
+      const existing = await getProfile(name);
+      if (!existing) {
+        res.status(404).json({ error: `Profile '${name}' 不存在` });
+        return;
+      }
+
+      // 检查是否是当前激活的 profile
+      const activeName = await getActiveProfile();
+      if (activeName === name) {
+        const { clearActiveProfile } = await import('./profile.js');
+        await clearActiveProfile();
+      }
+
+      await deleteProfile(name);
+      res.json({ deleted: name });
+    } catch (error) {
+      logger.error('删除 profile 失败', error);
+      const message = error instanceof Error ? error.message : '删除失败';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 启用 profile
+  app.post('/api/use', async (req, res) => {
+    try {
+      const { name } = req.body;
+
+      if (!name) {
+        res.status(400).json({ error: 'name 为必填项' });
+        return;
+      }
+
+      const result = await switchProfile(name, { quiet: true });
+
+      if (!result.success) {
+        res.status(400).json({ error: result.errors.join('; ') });
+        return;
+      }
+
+      res.json({ used: name, ...result });
+    } catch (error) {
+      logger.error('启用 profile 失败', error);
+      const message = error instanceof Error ? error.message : '启用失败';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 获取所有 providers
+  app.get('/api/providers', async (req, res) => {
+    try {
+      const providers = await listProviders();
+      const safeProviders = providers.map(sanitizeProvider);
+      res.json({ providers: safeProviders });
+    } catch (error) {
+      logger.error('获取 providers 失败', error);
+      res.status(500).json({ error: '获取 Provider 列表失败' });
+    }
+  });
+
+  // 获取单个 provider 详情
+  app.get('/api/providers/:name', async (req, res) => {
+    try {
+      const provider = await getProvider(req.params.name);
+
+      if (!provider) {
+        res.status(404).json({ error: `Provider '${req.params.name}' 不存在` });
+        return;
+      }
+
+      res.json(sanitizeProvider(provider));
+    } catch (error) {
+      logger.error('获取 provider 详情失败', error);
+      res.status(500).json({ error: '获取 Provider 详情失败' });
+    }
+  });
+
+  // 启动服务器
+  return new Promise((resolve) => {
+    // 绑定到 localhost，防止局域网访问
+    app.listen(port, '127.0.0.1', () => {
+      console.log(`\n  WebUI 服务已启动: http://127.0.0.1:${port}\n`);
+
+      if (options.open !== false) {
+        import('open').then((open) => {
+          open.default(`http://localhost:${port}`).catch((err) => {
+            logger.warn('无法自动打开浏览器', err);
+          });
+        }).catch(() => {
+          logger.warn('无法自动打开浏览器');
+        });
+      }
+
+      resolve();
+    });
+  });
+}

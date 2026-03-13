@@ -1,0 +1,127 @@
+id: proposal
+changeId: provider-system
+name: Proposal - Provider System for cce
+content: >
+  ## Background
+
+  Currently, cce manages API configurations for Claude Code and OpenCode separately within each profile. Users must configure the same provider (e.g., Volcano Engine) multiple times with duplicated base URLs and API keys.
+
+  ## Problem
+
+  1. **Duplicated configuration**: Same provider's baseURL and apiKey configured in both claudeConfig and opencodeConfig
+  2. **Inconsistent model mapping**: Model IDs like `ep-xxxx` must be entered separately for each tool
+  3. **High switching cost**: Changing providers requires updating multiple configuration blocks
+
+  ## Proposal
+
+  Introduce a **Provider** abstraction as a global, shared configuration layer:
+
+  ### Core Concepts
+
+  1. **Provider**: Global configuration for an LLM service (e.g., Volcano Engine, Bailian, DeepSeek)
+     - Stored in `~/.config/cce/providers/<name>.json`
+     - Contains: baseURL, apiKey, models array, defaultModel
+     - Shared across all profiles
+
+  2. **Profile**: References a provider and optionally overrides the model
+     - No longer has `type` (claude/opencode/all)
+     - Contains: `provider` (reference), optional `model` (override)
+     - Both Claude Code and OpenCode use the same profile configuration
+
+  ### Data Models
+
+  ```typescript
+  // Provider
+  interface Provider {
+    name: string;              // Unique identifier
+    displayName: string;       // Human-readable name
+    type: 'openai-compatible' | 'claude-native' | 'custom';
+    baseURL: string;
+    apiKey: string;
+    models: string[];          // Array of available model IDs
+    defaultModel: string;        // Default model from models array
+  }
+
+  // Profile
+  interface Profile {
+    name: string;
+    description?: string;
+    provider: string;            // Reference to Provider name
+    model?: string;              // Optional: override Provider's defaultModel
+    createdAt: string;
+    updatedAt: string;
+  }
+  ```
+
+  ### CLI Commands
+
+  ```bash
+  # Provider management
+  cce provider add <type>       # Add new provider (interactive)
+  cce provider list               # List all providers
+  cce provider show <name>        # Show provider details
+  cce provider edit <name>       # Edit provider
+  cce provider remove <name>     # Remove provider
+
+  # Profile management (simplified)
+  cce create <name>               # Create profile (interactive, select provider)
+  cce list                       # List profiles
+  cce show <name>                # Show profile
+  cce edit <name>               # Edit profile (model override only)
+  cce remove <name>             # Remove profile
+
+  # Activation
+  cce use [name]                # Activate profile (both tools)
+  cce current                   # Show current profile
+  cce doctor                    # Validate configuration
+  ```
+
+  ### Example Configuration Flow
+
+  ```bash
+  # 1. Add Volcano Engine provider
+  $ cce provider add volcano
+  ? Config name: volcano-prod
+  ? Display name: 火山引擎生产环境
+  ? Base URL: https://ark.cn-beijing.volces.com/api/v3
+  ? API Key: [hidden]
+  ? Available models: ep-20250101-xxxx,ep-20250201-yyyy,ep-20250301-zzzz
+  ? Default model: ep-20250201-yyyy
+
+  # 2. Create profile using provider
+  $ cce create work
+  ? Select provider: volcano-prod
+  ? Override default model? (y/N): n
+
+  # 3. Use profile
+  $ cce use work
+  ✓ Activated work (volcano-prod, ep-20250201-yyyyyyyy)
+    Claude Code: configured
+    OpenCode: configured
+  ```
+
+  ## Scope
+
+  ### In Scope
+
+  1. New Provider data model and storage
+  2. New simplified Profile model (no type, references provider)
+  3. Provider CRUD CLI commands
+  4. Updated Profile commands
+  5. Configuration generation for both tools from Provider + Profile
+  6. Volcano Engine as first supported provider type
+
+  ### Out of Scope
+
+  1. Migration from old profile format (per requirement)
+  2. Multiple providers per profile
+  3. Per-tool model selection (same model for both tools)
+  4. Advanced provider features (rate limiting, fallback, etc.)
+
+  ## Success Criteria
+
+  1. User can add a Volcano Engine provider with models array
+  2. User can create a profile referencing that provider
+  3. User can activate the profile and both Claude Code and OpenCode are configured
+  4. Provider change affects all referencing profiles
+  5. Profile model override works correctly

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCE - Claude Code 配置管理</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 顶部状态栏 -->
+    <header class="header">
+      <div class="header-content">
+        <h1>CCE 配置管理</h1>
+        <div id="current-status" class="current-status">
+          <span class="status-label">当前配置:</span>
+          <span id="current-profile-name" class="status-value">-</span>
+          <span id="current-profile-type" class="status-badge">-</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="refresh-btn" class="btn btn-secondary">刷新</button>
+        <button id="create-btn" class="btn btn-primary">新建配置</button>
+      </div>
+    </header>
+
+    <!-- 错误提示 -->
+    <div id="error-toast" class="toast error hidden"></div>
+
+    <!-- 成功提示 -->
+    <div id="success-toast" class="toast success hidden"></div>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <!-- Profiles 列表 -->
+      <section class="section">
+        <div class="section-header">
+          <h2>配置列表</h2>
+        </div>
+        <div class="table-container">
+          <table id="profiles-table" class="table">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>Provider 类型</th>
+                <th>Provider / 模型</th>
+                <th>描述</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="profiles-tbody">
+              <tr>
+                <td colspan="6" class="loading-row">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Details Drawer -->
+  <div id="details-drawer" class="drawer hidden">
+    <div class="drawer-overlay"></div>
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h2 id="details-title">配置详情</h2>
+        <button id="close-details" class="btn-icon" title="关闭">×</button>
+      </div>
+      <div id="details-body" class="drawer-body"></div>
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <div id="create-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>新建配置</h2>
+        <button id="close-create" class="btn-icon" title="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="create-form">
+          <div class="form-group">
+            <label for="create-name">配置名称 *</label>
+            <input type="text" id="create-name" name="name" required pattern="[a-zA-Z0-9_-]+" placeholder="例如: work、home (字母、数字、下划线、连字符)">
+          </div>
+
+          <div class="form-group">
+            <label for="create-description">描述</label>
+            <input type="text" id="create-description" name="description" placeholder="例如: 工作配置">
+          </div>
+
+          <div class="form-group">
+            <label for="create-provider">Provider *</label>
+            <select id="create-provider" name="provider" required>
+              <option value="">加载中...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="create-model">模型 (可选，留空使用默认)</label>
+            <input type="text" id="create-model" name="model" placeholder="选择 Provider 后可用">
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="create-use-now" name="use-now" checked>
+              创建后立即启用此配置
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="create-cancel" class="btn btn-secondary">取消</button>
+        <button id="create-submit" class="btn btn-primary">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)",
+      "Bash(./bin/cce:*)",
+      "Bash(chmod:*)",
+      "Bash(openspec new change:*)",
+      "Bash(npx openspec:*)",
+      "Bash(npm link:*)",
+      "Bash(cce:*)",
+      "Bash(claude-cs:*)"
+    ]
+  },
+  "enabledPlugins": {}
+}
