@@ -1,86 +1,106 @@
 [中文文档](README_CN.md)
 
-# claude-code-env (cce) - Claude Configuration Switcher
+# claude-code-env (cce)
 
-A CLI tool for managing multiple Claude API configurations via a Provider-Profile architecture, configuring both Claude Code and OpenCode simultaneously.
+A CLI tool for managing multiple Claude API configurations via a Provider-Profile architecture, configuring both [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenCode](https://github.com/opencode-ai/opencode) simultaneously.
 
 ## Features
 
-- 🚀 Quickly switch between API configurations (updates both Claude Code and OpenCode)
-- 🔒 Secure API key management (file permissions 0o600/0o700)
-- 🎯 Interactive command-line interface
-- 🌐 WebUI management dashboard
-- 🧪 Built-in configuration diagnostics
+- Provider-Profile architecture: separate API endpoint definitions from user configurations
+- Switch profiles to update Claude Code and OpenCode configs at once
+- Secure API key management with strict file permissions (0o600/0o700)
+- Interactive CLI with [Inquirer.js](https://github.com/SBoudrias/Inquirer.js)
+- WebUI management dashboard
+- Built-in configuration diagnostics (`cce doctor`)
 
 ## Installation
 
 ```bash
-npm install -g claude-code-env
+npm install -g @mengzai1/cce
 ```
+
+Requires Node.js >= 16.0.0.
 
 ## Quick Start
 
-### 1. Initialize
-
 ```bash
+# 1. Initialize config directory (~/.config/cce)
 cce init
-```
 
-### 2. Add a Provider
-
-```bash
-# Add a Volcano Engine provider
+# 2. Add a provider (e.g. Volcano Engine)
 cce provider add volcano
-```
 
-### 3. Create a Profile
-
-```bash
-# Create a profile (interactively select a provider)
+# 3. Create a profile referencing the provider
 cce create work
-```
 
-### 4. Activate a Profile
-
-```bash
+# 4. Activate the profile
 cce use work
 ```
 
-## Command Reference
+## Commands
 
-### Core Commands
+### Profile Management
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `cce init` | | Initialize the configuration directory |
+| `cce create <name>` | | Create a new profile (interactively select a provider) |
+| `cce use [name]` | | Activate a profile (interactive selection if name is omitted) |
+| `cce list` | `ls` | List all profiles |
+| `cce current` | `c` | Show the currently active profile |
+| `cce show <name>` | | Show profile details |
+| `cce edit <name>` | | Edit a profile |
+| `cce remove <name>` | `rm` | Remove a profile |
+
+### Provider Management
 
 | Command | Description |
 |---------|-------------|
-| `cce init` | Initialize the configuration directory |
-| `cce create <name>` | Create a new profile (interactively select a provider) |
-| `cce use [name]` | Activate a profile (interactive selection if name is omitted) |
-| `cce list` | List all profiles |
-| `cce current` | Show the currently active profile |
-| `cce ui` | Launch the WebUI management dashboard |
-
-### Provider Commands
-
-| Command | Description |
-|---------|-------------|
-| `cce provider add <type>` | Add a new provider (volcano, bailian, deepseek, openai-compatible, claude-native, custom) |
+| `cce provider add <type>` | Add a new provider |
 | `cce provider list` | List all providers |
 | `cce provider show <name>` | Show provider details |
 | `cce provider edit <name>` | Edit a provider |
 | `cce provider remove <name>` | Remove a provider |
 
-### Management Commands
+Supported provider types: `volcano`, `bailian`, `deepseek`, `openai-compatible`, `claude-native`, `custom`
+
+### Other Commands
 
 | Command | Description |
 |---------|-------------|
-| `cce show <name>` | Show profile details |
-| `cce edit <name>` | Edit a profile |
-| `cce remove <name>` | Remove a profile |
 | `cce doctor` | Check configuration for issues |
+| `cce ui` | Launch the WebUI dashboard |
 
-## Configuration Format
+`cce ui` options:
+- `-p, --port <port>` — specify a port
+- `--no-open` — don't auto-open the browser
 
-### Provider Configuration (`~/.config/cce/providers/`)
+## How It Works
+
+```
+Profile (references) -> Provider (resolves) -> EffectiveConfig (generates) -> Config Files
+```
+
+When you run `cce use <profile>`:
+
+1. Loads the profile and resolves the referenced provider
+2. Merges into an `EffectiveConfig` (baseURL, apiKey, model)
+3. Writes Claude Code config (`~/.claude/settings.json`) and OpenCode config (`~/.config/opencode/opencode.json`)
+
+## Configuration
+
+### Directory Layout
+
+```
+~/.config/cce/
+├── providers/          # Provider definitions
+│   └── volcano-prod.json
+├── profiles/           # User profiles
+│   └── work.json
+└── active              # Currently active profile name
+```
+
+### Provider Example
 
 ```json
 {
@@ -94,7 +114,7 @@ cce use work
 }
 ```
 
-### Profile Configuration (`~/.config/cce/profiles/`)
+### Profile Example
 
 ```json
 {
@@ -107,30 +127,16 @@ cce use work
 }
 ```
 
-## Directory Structure
-
-```
-~/.config/cce/
-├── providers/          # Provider configurations
-│   └── volcano-prod.json
-├── profiles/           # Profile configurations
-│   └── work.json
-└── active              # Name of the currently active profile
-```
-
 ## FAQ
 
-### Q: What does `cce use` do?
+**Q: What does `cce use` actually modify?**
+A: It writes to `~/.claude/settings.json` (Claude Code) and `~/.config/opencode/opencode.json` (OpenCode).
 
-A: It updates both the Claude Code configuration (`~/.claude/settings.json`) and the OpenCode configuration (`~/.config/opencode/opencode.json`) simultaneously.
+**Q: How are API keys secured?**
+A: The `~/.config/cce` directory is set to `700`, config files to `600` (owner read/write only).
 
-### Q: How do I check the currently active configuration?
-
-A: Run `cce current` to see the currently active profile.
-
-### Q: What are the file permissions?
-
-A: The configuration directory is set to `700`, and configuration files are set to `600` (owner read/write only).
+**Q: Can I override the model in a profile?**
+A: Yes. A profile can specify a `model` field to override the provider's `defaultModel`.
 
 ## License
 
