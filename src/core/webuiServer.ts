@@ -2,9 +2,9 @@ import path from 'path';
 import express from 'express';
 import { logger } from '../utils/logger.js';
 import { listProfiles, getProfile, saveProfile, deleteProfile, getActiveProfile } from './profile.js';
-import { listProviders, getProvider } from './provider.js';
+import { listProviders, getProvider, saveProvider, deleteProvider, isProviderInUse, getProviderUsage } from './provider.js';
 import { switchProfile } from './switch.js';
-import type { Profile, Provider } from '../types/index.js';
+import type { Profile, Provider, ProviderType } from '../types/index.js';
 
 // WebUI 静态文件目录
 const WEBUI_DIR = path.resolve(__dirname, '..', '..', 'webui');
@@ -340,6 +340,201 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
     } catch (error) {
       logger.error('获取 provider 详情失败', error);
       res.status(500).json({ error: '获取 Provider 详情失败' });
+    }
+  });
+
+  // 创建 provider
+  app.post('/api/providers', async (req, res) => {
+    try {
+      const { name, displayName, type, baseURL, apiKey, models, defaultModel } = req.body;
+
+      // 验证必填字段
+      if (!name || !displayName || !type || !baseURL || !apiKey || !models || !defaultModel) {
+        res.status(400).json({ error: '所有字段均为必填项' });
+        return;
+      }
+
+      // 验证名称格式，防止路径遍历攻击
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+        res.status(400).json({ error: '名称只能包含字母、数字、下划线和连字符' });
+        return;
+      }
+
+      // 验证名称长度
+      if (name.length > 64) {
+        res.status(400).json({ error: '名称长度不能超过64个字符' });
+        return;
+      }
+
+      // 验证 type
+      const validTypes: ProviderType[] = ['openai-compatible', 'claude-native', 'custom'];
+      if (!validTypes.includes(type)) {
+        res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
+        return;
+      }
+
+      // 验证 baseURL 格式
+      try {
+        const url = new URL(baseURL);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          throw new Error('只支持 http 和 https 协议');
+        }
+      } catch {
+        res.status(400).json({ error: 'Base URL 格式无效，必须是有效的 http/https URL' });
+        return;
+      }
+
+      // 验证 models 数组
+      if (!Array.isArray(models) || models.length === 0) {
+        res.status(400).json({ error: '可用模型列表不能为空' });
+        return;
+      }
+
+      // 过滤并验证模型名称
+      const cleanedModels = models.map(m => m.trim()).filter(m => m);
+      if (cleanedModels.length === 0) {
+        res.status(400).json({ error: '可用模型列表不能为空' });
+        return;
+      }
+
+      // 验证 defaultModel 在 models 中
+      if (!cleanedModels.includes(defaultModel.trim())) {
+        res.status(400).json({ error: '默认模型必须在可用模型列表中' });
+        return;
+      }
+
+      // 检查是否已存在
+      const existing = await getProvider(name);
+      if (existing) {
+        res.status(400).json({ error: `Provider '${name}' 已存在` });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const provider: Provider = {
+        name,
+        displayName: displayName.trim(),
+        type,
+        baseURL: baseURL.trim().replace(/\/+$/, ''), // 移除末尾斜杠
+        apiKey: apiKey.trim(),
+        models: cleanedModels,
+        defaultModel: defaultModel.trim(),
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await saveProvider(provider);
+      res.json({ created: name });
+    } catch (error) {
+      logger.error('创建 provider 失败', error);
+      const message = error instanceof Error ? error.message : '创建失败';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 更新 provider
+  app.put('/api/providers/:name', async (req, res) => {
+    try {
+      const name = req.params.name;
+      const { displayName, type, baseURL, apiKey, models, defaultModel } = req.body;
+
+      const existing = await getProvider(name);
+      if (!existing) {
+        res.status(404).json({ error: `Provider '${name}' 不存在` });
+        return;
+      }
+
+      // 验证 type
+      if (type) {
+        const validTypes: ProviderType[] = ['openai-compatible', 'claude-native', 'custom'];
+        if (!validTypes.includes(type)) {
+          res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
+          return;
+        }
+      }
+
+      // 验证 baseURL 格式
+      if (baseURL) {
+        try {
+          const url = new URL(baseURL);
+          if (!['http:', 'https:'].includes(url.protocol)) {
+            throw new Error('只支持 http 和 https 协议');
+          }
+        } catch {
+          res.status(400).json({ error: 'Base URL 格式无效，必须是有效的 http/https URL' });
+          return;
+        }
+      }
+
+      // 验证 models 数组
+      let cleanedModels = existing.models;
+      if (models !== undefined) {
+        if (!Array.isArray(models) || models.length === 0) {
+          res.status(400).json({ error: '可用模型列表不能为空' });
+          return;
+        }
+        cleanedModels = models.map((m: string) => m.trim()).filter((m: string) => m);
+        if (cleanedModels.length === 0) {
+          res.status(400).json({ error: '可用模型列表不能为空' });
+          return;
+        }
+      }
+
+      // 验证 defaultModel 在 models 中
+      const finalDefaultModel = defaultModel !== undefined ? defaultModel.trim() : existing.defaultModel;
+      if (!cleanedModels.includes(finalDefaultModel)) {
+        res.status(400).json({ error: '默认模型必须在可用模型列表中' });
+        return;
+      }
+
+      const updatedProvider: Provider = {
+        name,
+        displayName: displayName?.trim() ?? existing.displayName,
+        type: type ?? existing.type,
+        baseURL: baseURL ? baseURL.trim().replace(/\/+$/, '') : existing.baseURL,
+        apiKey: apiKey?.trim() ?? existing.apiKey,
+        models: cleanedModels,
+        defaultModel: finalDefaultModel,
+        createdAt: existing.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveProvider(updatedProvider);
+      res.json({ updated: name });
+    } catch (error) {
+      logger.error('更新 provider 失败', error);
+      const message = error instanceof Error ? error.message : '更新失败';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // 删除 provider
+  app.delete('/api/providers/:name', async (req, res) => {
+    try {
+      const name = req.params.name;
+
+      const existing = await getProvider(name);
+      if (!existing) {
+        res.status(404).json({ error: `Provider '${name}' 不存在` });
+        return;
+      }
+
+      // 检查是否被 Profile 使用
+      const inUse = await isProviderInUse(name);
+      if (inUse) {
+        const usingProfiles = await getProviderUsage(name);
+        res.status(400).json({
+          error: `Provider '${name}' 正在被以下配置使用: ${usingProfiles.join(', ')}，请先删除或修改这些配置`,
+        });
+        return;
+      }
+
+      await deleteProvider(name);
+      res.json({ deleted: name });
+    } catch (error) {
+      logger.error('删除 provider 失败', error);
+      const message = error instanceof Error ? error.message : '删除失败';
+      res.status(500).json({ error: message });
     }
   });
 
