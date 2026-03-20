@@ -25,6 +25,31 @@ async function ensureProvidersDir(): Promise<void> {
 }
 
 // ============================================================================
+// Provider Type Migration
+// ============================================================================
+
+/** 旧类型别名映射 — 自动迁移到新类型 */
+const TYPE_ALIASES: Record<string, ProviderType> = {
+  'claude-native': 'anthropic-compatible',
+};
+
+/**
+ * 迁移 Provider 类型（自动将旧类型更新为新类型）
+ * @returns 返回迁移后的 Provider（如果发生迁移则保存文件）
+ */
+async function migrateProviderType(provider: Provider): Promise<Provider> {
+  const newType = TYPE_ALIASES[provider.type as string];
+  if (newType) {
+    const oldType = provider.type;
+    provider.type = newType;
+    // 自动保存迁移后的文件
+    await saveProvider(provider);
+    logger.info(`Provider ${provider.name} 类型已迁移: ${oldType} → ${newType}`);
+  }
+  return provider;
+}
+
+// ============================================================================
 // Provider Validation
 // ============================================================================
 
@@ -89,6 +114,9 @@ export async function listProviders(): Promise<Provider[]> {
       const content = await fs.readFile(filePath, 'utf-8');
       const provider = JSON.parse(content) as Provider;
 
+      // 迁移旧类型
+      await migrateProviderType(provider);
+
       const errors = validateProvider(provider);
       if (errors.length > 0) {
         logger.warn(`Provider ${file} 验证失败: ${errors.map(e => e.message).join(', ')}`);
@@ -120,6 +148,9 @@ export async function getProvider(name: string): Promise<Provider | null> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const provider = JSON.parse(content) as Provider;
+
+    // 迁移旧类型
+    await migrateProviderType(provider);
 
     const errors = validateProvider(provider);
     if (errors.length > 0) {
