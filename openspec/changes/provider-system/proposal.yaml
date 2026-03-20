@@ -35,7 +35,7 @@ content: >
   interface Provider {
     name: string;              // Unique identifier
     displayName: string;       // Human-readable name
-    type: 'openai-compatible' | 'claude-native' | 'custom';
+    type: 'openai-compatible' | 'anthropic-compatible' | 'custom';
     baseURL: string;
     apiKey: string;
     models: string[];          // Array of available model IDs

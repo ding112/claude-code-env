@@ -35,11 +35,10 @@ export function validateProvider(data: Partial<Provider>): ValidationError[] {
     errors.push({ field: 'name', message: 'Provider name 不能为空' });
   }
 
-  if (!data.displayName || typeof data.displayName !== 'string' || data.displayName.trim() === '') {
-    errors.push({ field: 'displayName', message: 'Provider display name 不能为空' });
-  }
+  // displayName 可选，如果未提供则使用 name
+  // 不再验证必填
 
-  const validTypes: ProviderType[] = ['openai-compatible', 'claude-native', 'custom'];
+  const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
   if (!data.type || !validTypes.includes(data.type as ProviderType)) {
     errors.push({ field: 'type', message: `Provider type 必须是: ${validTypes.join(', ')}` });
   }
@@ -139,6 +138,11 @@ export async function getProvider(name: string): Promise<Provider | null> {
 }
 
 export async function saveProvider(provider: Provider): Promise<void> {
+  // 如果 displayName 为空，使用 name 作为默认值
+  if (!provider.displayName || provider.displayName.trim() === '') {
+    provider.displayName = provider.name;
+  }
+
   const errors = validateProvider(provider);
   if (errors.length > 0) {
     const errorMsg = errors.map(e => `${e.field}: ${e.message}`).join('\n');

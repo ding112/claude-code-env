@@ -62,9 +62,9 @@ function formatDate(isoString) {
 // 获取 Provider 类型标签
 function getProviderTypeBadge(type) {
   const badges = {
-    'openai-compatible': '<span class="badge badge-openai">OpenAI Compatible</span>',
-    'claude-native': '<span class="badge badge-claude">Claude Native</span>',
-    'custom': '<span class="badge badge-custom">Custom</span>',
+    'openai-compatible': '<span class="badge badge-openai">OpenAI 接口协议</span>',
+    'anthropic-compatible': '<span class="badge badge-claude">Anthropic 接口协议</span>',
+    'custom': '<span class="badge badge-custom">自定义</span>',
   };
   return badges[type] || `<span class="badge">${escapeHtml(type)}</span>`;
 }

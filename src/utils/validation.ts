@@ -24,11 +24,6 @@ export function validateName(name: string, type: string): { valid: boolean; erro
     return { valid: false, error: `${type} name 包含非法字符` };
   }
 
-  // 检查名称格式（只允许字母、数字、连字符、下划线）
-  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
-    return { valid: false, error: `${type} name 只能包含字母、数字、连字符和下划线` };
-  }
-
   return { valid: true };
 }
 

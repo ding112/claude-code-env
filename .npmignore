@@ -1,0 +1,25 @@
+# Source files
+src/
+tests/
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+vitest.config.ts
+.claude/
+
+# Development files
+.gitignore
+.git/
+node_modules/
+
+# Documentation
+openspec/
+*.md
+!README.md
+!LICENSE
+
+# Misc
+.DS_Store
+*.log

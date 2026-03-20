@@ -11,7 +11,7 @@
 
 | 类型 | 描述 |
 |------|------|
-| `ProviderType` | Provider 类型枚举：openai-compatible, claude-native, custom |
+| `ProviderType` | Provider 类型枚举：openai-compatible, anthropic-compatible, custom |
 | `Provider` | Provider 配置：name, displayName, type, baseURL, apiKey, models, defaultModel |
 | `Profile` | Profile 配置：name, provider (引用), model (可选覆盖) |
 | `EffectiveConfig` | Profile + Provider 合并后的运行时配置 |

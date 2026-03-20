@@ -143,8 +143,8 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       }
 
       // 验证名称格式，防止路径遍历攻击
-      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-        res.status(400).json({ error: '名称只能包含字母、数字、下划线和连字符' });
+      if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+        res.status(400).json({ error: '名称包含非法字符' });
         return;
       }
 
@@ -348,15 +348,15 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
     try {
       const { name, displayName, type, baseURL, apiKey, models, defaultModel } = req.body;
 
-      // 验证必填字段
-      if (!name || !displayName || !type || !baseURL || !apiKey || !models || !defaultModel) {
-        res.status(400).json({ error: '所有字段均为必填项' });
+      // 验证必填字段 (displayName 可选)
+      if (!name || !type || !baseURL || !apiKey || !models || !defaultModel) {
+        res.status(400).json({ error: 'name, type, baseURL, apiKey, models, defaultModel 为必填项' });
         return;
       }
 
       // 验证名称格式，防止路径遍历攻击
-      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-        res.status(400).json({ error: '名称只能包含字母、数字、下划线和连字符' });
+      if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+        res.status(400).json({ error: '名称包含非法字符' });
         return;
       }
 
@@ -367,7 +367,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       }
 
       // 验证 type
-      const validTypes: ProviderType[] = ['openai-compatible', 'claude-native', 'custom'];
+      const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
       if (!validTypes.includes(type)) {
         res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
         return;
@@ -413,7 +413,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       const now = new Date().toISOString();
       const provider: Provider = {
         name,
-        displayName: displayName.trim(),
+        displayName: displayName?.trim() || name, // displayName 可选，默认使用 name
         type,
         baseURL: baseURL.trim().replace(/\/+$/, ''), // 移除末尾斜杠
         apiKey: apiKey.trim(),
@@ -446,7 +446,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
 
       // 验证 type
       if (type) {
-        const validTypes: ProviderType[] = ['openai-compatible', 'claude-native', 'custom'];
+        const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
         if (!validTypes.includes(type)) {
           res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
           return;

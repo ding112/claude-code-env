@@ -62,7 +62,7 @@ cce use work
 | `cce provider edit <name>` | 编辑 Provider |
 | `cce provider remove <name>` | 删除 Provider |
 
-支持的 Provider 类型：`volcano`、`bailian`、`deepseek`、`openai-compatible`、`claude-native`、`custom`
+支持的 Provider 类型：`openai-compatible`、`anthropic-compatible`、`custom`
 
 ### 其他命令
 

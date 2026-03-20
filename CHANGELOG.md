@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-20
+
+### Added
+
+- Vitest 测试框架配置和 validation.ts 测试用例
+
+### Changed
+
+- Provider 类型从 `claude-native` 重命名为 `anthropic-compatible`
+- Provider 显示名称改为可选，默认使用配置名称
+- 配置名称验证放宽，仅禁止路径遍历字符
+- Provider 类型选择改为交互式下拉列表
+- WebUI 同步更新类型名称和验证逻辑
+
+### Fixed
+
+- 文档中过时的类型名称引用已更新
+
 ## [1.0.1] - 2026-03-13
 
 ### Changed
@@ -64,7 +82,8 @@ Initial release.
 - Restructured project to standard npm package layout
 - Removed hook commands and shell integration logic in favor of a simpler architecture
 
-[Unreleased]: https://github.com/ding112/claude-code-env/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/ding112/claude-code-env/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ding112/claude-code-env/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/ding112/claude-code-env/compare/0.1.0...v1.0.1
 [0.1.0]: https://github.com/ding112/claude-code-env/compare/0.0.1...0.1.0
 [0.0.1]: https://github.com/ding112/claude-code-env/releases/tag/0.0.1
