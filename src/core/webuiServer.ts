@@ -539,9 +539,10 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   });
 
   // 启动服务器
-  return new Promise((resolve) => {
+  // 注意：Promise 保持 pending 状态，防止 Node.js 进程退出导致服务停止
+  return new Promise<void>((resolve, reject) => {
     // 绑定到 localhost，防止局域网访问
-    app.listen(port, '127.0.0.1', () => {
+    const server = app.listen(port, '127.0.0.1', () => {
       console.log(`\n  WebUI 服务已启动: http://127.0.0.1:${port}\n`);
 
       if (options.open !== false) {
@@ -554,7 +555,11 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         });
       }
 
-      resolve();
+      // 不调用 resolve()，让 Promise 保持 pending，服务持续运行
+    });
+
+    server.on('error', (err) => {
+      reject(err);
     });
   });
 }
