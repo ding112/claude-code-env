@@ -62,7 +62,7 @@ cce use work
 | `cce provider edit <name>` | Edit a provider |
 | `cce provider remove <name>` | Remove a provider |
 
-Supported provider types: `volcano`, `bailian`, `deepseek`, `openai-compatible`, `claude-native`, `custom`
+Supported provider types: `openai-compatible`, `anthropic-compatible`, `custom`
 
 ### Other Commands
 

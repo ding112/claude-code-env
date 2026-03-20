@@ -29,69 +29,56 @@ function maskApiKey(apiKey: string): string {
   return `${apiKey.substring(0, 8)}${'*'.repeat(Math.max(4, apiKey.length - 12))}${apiKey.substring(apiKey.length - 4)}`;
 }
 
-function getBaseURLFromType(type: string): string {
-  const defaults: Record<string, string> = {
-    'volcano': 'https://ark.cn-beijing.volces.com/api/v3',
-    'bailian': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    'deepseek': 'https://api.deepseek.com/v1',
-  };
-  return defaults[type] || '';
-}
+// 类型选项映射
+const TYPE_OPTIONS = [
+  { name: 'OpenAI 接口协议', value: 'openai-compatible' },
+  { name: 'Anthropic 接口协议', value: 'anthropic-compatible' },
+  { name: '自定义', value: 'custom' },
+] as const;
 
-function getDisplayNameFromType(type: string): string {
-  const names: Record<string, string> = {
-    'volcano': '火山引擎',
-    'bailian': '百炼 (Bailian)',
-    'deepseek': 'DeepSeek',
-  };
-  return names[type] || type;
-}
-
-function getProviderTypeFromAlias(type: string): 'openai-compatible' | 'claude-native' | 'custom' {
-  const map: Record<string, 'openai-compatible' | 'claude-native' | 'custom'> = {
-    'volcano': 'openai-compatible',
-    'bailian': 'openai-compatible',
-    'deepseek': 'openai-compatible',
-    'openai-compatible': 'openai-compatible',
-    'claude-native': 'claude-native',
-    'custom': 'custom',
-  };
-  return map[type] || 'custom';
+function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthropic-compatible' | 'custom' {
+  const validTypes = ['openai-compatible', 'anthropic-compatible', 'custom'] as const;
+  return validTypes.includes(value as typeof validTypes[number])
+    ? value as typeof validTypes[number]
+    : 'custom';
 }
 
 // ============================================================================
 // Provider Commands
 // ============================================================================
 
-export async function providerAddCommand(type: string): Promise<void> {
+export async function providerAddCommand(): Promise<void> {
   try {
     const answers = await inquirer.prompt([
       {
+        type: 'list',
+        name: 'type',
+        message: '选择 Provider 类型:',
+        choices: TYPE_OPTIONS,
+      },
+      {
         type: 'input',
         name: 'name',
-        message: '配置名称 (如 volcano-prod):',
+        message: '配置名称:',
         validate: (input: string) => {
-          if (!input.trim()) return '配置名称不能为空';
-          // 检查名称格式
-          if (!/^[a-z0-9-]+$/.test(input)) return '配置名称只能包含小写字母、数字和连字符';
+          const trimmed = input.trim();
+          if (!trimmed) return '配置名称不能为空';
+          // 检查路径遍历字符
+          if (trimmed.includes('..') || trimmed.includes('/') || trimmed.includes('\\')) {
+            return '配置名称包含非法字符';
+          }
           return true;
         },
       },
       {
         type: 'input',
         name: 'displayName',
-        message: '显示名称:',
-        default: () => getDisplayNameFromType(type),
-        validate: (input: string) => {
-          if (!input.trim()) return '显示名称不能为空';
-          return true;
-        },
+        message: '显示名称 (可选，留空则使用配置名称):',
       },
       {
         type: 'input',
         name: 'baseURL',
         message: 'Base URL:',
-        default: () => getBaseURLFromType(type),
         validate: (input: string) => {
           if (!input.trim()) return 'Base URL 不能为空';
           try {
@@ -141,9 +128,9 @@ export async function providerAddCommand(type: string): Promise<void> {
     }
 
     const provider: Provider = {
-      name: answers.name,
-      displayName: answers.displayName,
-      type: getProviderTypeFromAlias(type),
+      name: answers.name.trim(),
+      displayName: answers.displayName?.trim() || answers.name.trim(),
+      type: getProviderTypeFromValue(answers.type),
       baseURL: answers.baseURL,
       apiKey: answers.apiKey,
       models,

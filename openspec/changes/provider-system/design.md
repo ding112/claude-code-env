@@ -55,7 +55,7 @@
 interface Provider {
   name: string;
   displayName: string;
-  type: 'openai-compatible' | 'claude-native' | 'custom';
+  type: 'openai-compatible' | 'anthropic-compatible' | 'custom';
   baseURL: string;
   apiKey: string;
   models: string[];

@@ -3,7 +3,7 @@
 // ============================================================================
 
 // Provider 类型
-export type ProviderType = 'openai-compatible' | 'claude-native' | 'custom';
+export type ProviderType = 'openai-compatible' | 'anthropic-compatible' | 'custom';
 
 // Provider 配置（全局共享）
 export interface Provider {

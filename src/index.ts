@@ -162,11 +162,11 @@ const providerCmd = program
   });
 
 providerCmd
-  .command('add <type>')
-  .description('添加新的 Provider (type: volcano, bailian, deepseek, openai-compatible, claude-native, custom)')
-  .action(async (type: string) => {
+  .command('add')
+  .description('添加新的 Provider')
+  .action(async () => {
     try {
-      await providerAddCommand(type);
+      await providerAddCommand();
     } catch (error) {
       logger.error(`添加 Provider 失败: ${error}`);
       process.exit(1);

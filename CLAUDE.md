@@ -82,7 +82,7 @@ src/
 管理 Provider 定义（API 端点配置）:
 
 ```bash
-cce provider add <type>      # 添加新 Provider (type: volcano, bailian, deepseek, openai-compatible, claude-native, custom)
+cce provider add             # 添加新 Provider (交互式选择类型)
 cce provider list             # 列出所有 Providers
 cce provider show <name>       # 显示 Provider 详情
 cce provider edit <name>       # 编辑 Provider
