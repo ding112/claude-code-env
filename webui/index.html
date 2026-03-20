@@ -32,8 +32,14 @@
 
     <!-- 主内容区 -->
     <main class="main">
+      <!-- Tab 切换 -->
+      <div class="tabs">
+        <button class="tab active" data-tab="profiles">配置列表</button>
+        <button class="tab" data-tab="providers">Providers</button>
+      </div>
+
       <!-- Profiles 列表 -->
-      <section class="section">
+      <section id="profiles-section" class="section">
         <div class="section-header">
           <h2>配置列表</h2>
         </div>
@@ -52,6 +58,32 @@
             <tbody id="profiles-tbody">
               <tr>
                 <td colspan="6" class="loading-row">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Providers 列表 -->
+      <section id="providers-section" class="section hidden">
+        <div class="section-header">
+          <h2>Provider 列表</h2>
+          <button id="create-provider-btn" class="btn btn-primary">新建 Provider</button>
+        </div>
+        <div class="table-container">
+          <table id="providers-table" class="table">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>类型</th>
+                <th>Base URL</th>
+                <th>模型数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="providers-tbody">
+              <tr>
+                <td colspan="5" class="loading-row">加载中...</td>
               </tr>
             </tbody>
           </table>
@@ -115,6 +147,80 @@
       <div class="modal-footer">
         <button id="create-cancel" class="btn btn-secondary">取消</button>
         <button id="create-submit" class="btn btn-primary">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Provider Details Drawer -->
+  <div id="provider-details-drawer" class="drawer hidden">
+    <div class="drawer-overlay"></div>
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h2 id="provider-details-title">Provider 详情</h2>
+        <button id="close-provider-details" class="btn-icon" title="关闭">×</button>
+      </div>
+      <div id="provider-details-body" class="drawer-body"></div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Provider Modal -->
+  <div id="provider-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="provider-modal-title">新建 Provider</h2>
+        <button id="close-provider-modal" class="btn-icon" title="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="provider-form">
+          <div class="form-group">
+            <label for="provider-name">配置名称 *</label>
+            <input type="text" id="provider-name" name="name" required pattern="[a-zA-Z0-9_-]+" placeholder="例如: my-openai (字母、数字、下划线、连字符)">
+            <small class="form-hint">创建后不可修改</small>
+          </div>
+
+          <div class="form-group">
+            <label for="provider-display-name">显示名称 *</label>
+            <input type="text" id="provider-display-name" name="displayName" required placeholder="例如: My OpenAI">
+          </div>
+
+          <div class="form-group">
+            <label for="provider-type">类型 *</label>
+            <select id="provider-type" name="type" required>
+              <option value="">请选择类型</option>
+              <option value="openai-compatible">OpenAI Compatible</option>
+              <option value="claude-native">Claude Native</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="provider-base-url">Base URL *</label>
+            <input type="text" id="provider-base-url" name="baseURL" required placeholder="例如: https://api.openai.com/v1">
+          </div>
+
+          <div class="form-group">
+            <label for="provider-api-key">API Key *</label>
+            <input type="password" id="provider-api-key" name="apiKey" required placeholder="输入 API Key">
+          </div>
+
+          <div class="form-group">
+            <label for="provider-models">可用模型 * (逗号分隔)</label>
+            <input type="text" id="provider-models" name="models" required placeholder="例如: gpt-4, gpt-3.5-turbo">
+            <small class="form-hint">多个模型用逗号分隔，自动去除空格</small>
+          </div>
+
+          <div class="form-group">
+            <label for="provider-default-model">默认模型 *</label>
+            <select id="provider-default-model" name="defaultModel" required>
+              <option value="">请先填写可用模型</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="provider-cancel" class="btn btn-secondary">取消</button>
+        <button id="provider-submit" class="btn btn-primary">保存</button>
       </div>
     </div>
   </div>
