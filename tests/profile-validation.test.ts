@@ -36,4 +36,18 @@ describe('validateProfile claudeCodeSettings', () => {
     );
     expect(errors.find((e) => e.field.includes('subagentModel'))?.message).toContain('字符串');
   });
+
+  it('rejects null and non-object claudeCodeSettings without throwing', () => {
+    const nullErrors = validateProfile(
+      makeProfile({ claudeCodeSettings: null as never }),
+      ['deepseek-prod'],
+    );
+    expect(nullErrors.find((e) => e.field === 'claudeCodeSettings')?.message).toContain('必须是对象');
+
+    const arrayErrors = validateProfile(
+      makeProfile({ claudeCodeSettings: [] as never }),
+      ['deepseek-prod'],
+    );
+    expect(arrayErrors.find((e) => e.field === 'claudeCodeSettings')?.message).toContain('必须是对象');
+  });
 });

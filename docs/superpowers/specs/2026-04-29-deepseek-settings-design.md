@@ -21,17 +21,19 @@ DeepSeek 等供应商需要额外配置 5 个环境变量：
 ## 设计决策
 
 ### 存储层级
-- **Profile 级别**：这些参数存储在 Profile 中，每个 Profile 可以独立配置
+- **仅 Profile 级别**：`claudeCodeSettings` 只存储在 Profile 中，每个 Profile 独立配置
+- **Provider 不存储默认值**：Provider 不新增 `claudeCodeSettings` 字段
 
 ### 字段设计
 - **独立字段**：使用嵌套对象 `claudeCodeSettings` 包含 5 个独立字段
 
 ### 值来源
-- **所有 Provider 可选**：任何 Provider 都可以定义这些字段的默认值，Profile 可覆盖
+- **仅来自 Profile**：`claudeCodeSettings` 的生效值完全来自 Profile
 
 ### Vendor 字段
 - **新增 vendor 字段**：标识供应商（deepseek/volcengine/tencent/alibaba/openai/anthropic/custom）
 - **预定义列表选择**：用户从预定义列表中选择，不是自由输入
+- **兼容性策略**：历史数据允许缺省；新增 Provider 交互默认要求选择 vendor
 
 ## 类型定义
 
@@ -41,15 +43,21 @@ DeepSeek 等供应商需要额外配置 5 个环境变量：
 export type VendorType = 'deepseek' | 'volcengine' | 'tencent' | 'alibaba' | 'openai' | 'anthropic' | 'custom';
 ```
 
-### ClaudeCodeSettings
+### ClaudeCodeEffortLevel
 
 ```typescript
-export interface ClaudeCodeSettings {
+export type ClaudeCodeEffortLevel = 'low' | 'medium' | 'high' | 'max';
+```
+
+### ProfileClaudeCodeSettings
+
+```typescript
+export interface ProfileClaudeCodeSettings {
   defaultOpusModel?: string;
   defaultSonnetModel?: string;
   defaultHaikuModel?: string;
   subagentModel?: string;
-  effortLevel?: 'low' | 'medium' | 'high' | 'max';
+  effortLevel?: ClaudeCodeEffortLevel;
 }
 ```
 
@@ -60,12 +68,11 @@ export interface Provider {
   name: string;
   displayName: string;
   type: ProviderType;
-  vendor?: VendorType;  // 新增：供应商标识
+  vendor?: VendorType;  // 历史数据可缺省；新增交互默认要求选择
   baseURL: string;
   apiKey: string;
   models: string[];
   defaultModel: string;
-  claudeCodeSettings?: ClaudeCodeSettings;  // 新增：Claude Code 专用配置
   createdAt?: string;
   updatedAt?: string;
 }
@@ -79,7 +86,7 @@ export interface Profile {
   description?: string;
   provider: string;
   model?: string;
-  claudeCodeSettings?: ClaudeCodeSettings;  // 新增：覆盖 Provider 默认值
+  claudeCodeSettings?: ProfileClaudeCodeSettings;  // Profile 高级配置
   createdAt: string;
   updatedAt: string;
 }
@@ -95,8 +102,8 @@ export interface EffectiveConfig {
   providerName: string;
   providerDisplayName: string;
   isModelOverridden: boolean;
-  vendor?: VendorType;  // 新增
-  claudeCodeSettings?: ClaudeCodeSettings;  // 新增：合并后的配置
+  vendor?: VendorType;
+  claudeCodeSettings?: ProfileClaudeCodeSettings;  // 来自 Profile
 }
 ```
 
@@ -107,11 +114,11 @@ export interface ClaudeEnvConfig {
   ANTHROPIC_BASE_URL: string;
   ANTHROPIC_AUTH_TOKEN: string;
   ANTHROPIC_MODEL: string;
-  ANTHROPIC_DEFAULT_OPUS_MODEL?: string;  // 新增
-  ANTHROPIC_DEFAULT_SONNET_MODEL?: string;  // 新增
-  ANTHROPIC_DEFAULT_HAIKU_MODEL?: string;  // 新增
-  CLAUDE_CODE_SUBAGENT_MODEL?: string;  // 新增
-  CLAUDE_CODE_EFFORT_LEVEL?: string;  // 新增
+  ANTHROPIC_DEFAULT_OPUS_MODEL?: string;
+  ANTHROPIC_DEFAULT_SONNET_MODEL?: string;
+  ANTHROPIC_DEFAULT_HAIKU_MODEL?: string;
+  CLAUDE_CODE_SUBAGENT_MODEL?: string;
+  CLAUDE_CODE_EFFORT_LEVEL?: ClaudeCodeEffortLevel;
 }
 ```
 
@@ -123,11 +130,10 @@ export interface ClaudeEnvConfig {
 function resolveConfig(profile: Profile, provider: Provider): EffectiveConfig {
   const model = profile.model || provider.defaultModel;
 
-  // 合并 Claude Code Settings（Provider 默认 + Profile 覆盖）
-  const claudeCodeSettings = {
-    ...provider.claudeCodeSettings,
-    ...profile.claudeCodeSettings,
-  };
+  const claudeCodeSettings = profile.claudeCodeSettings
+    && Object.values(profile.claudeCodeSettings).some((v) => v !== undefined)
+    ? profile.claudeCodeSettings
+    : undefined;
 
   return {
     baseURL: provider.baseURL,
@@ -137,32 +143,41 @@ function resolveConfig(profile: Profile, provider: Provider): EffectiveConfig {
     providerDisplayName: provider.displayName,
     isModelOverridden: !!profile.model,
     vendor: provider.vendor,
-    claudeCodeSettings: Object.keys(claudeCodeSettings).length > 0
-      ? claudeCodeSettings
-      : undefined,
+    claudeCodeSettings,
   };
 }
 ```
 
-合并规则：
-1. Provider 定义默认值
-2. Profile 可以覆盖 Provider 的值
-3. 如果两者都没定义，则不设置这些环境变量
+规则：
+1. `claudeCodeSettings` 仅由 Profile 提供
+2. 如果 Profile 未配置或全部为 `undefined`，则不设置这些环境变量
 
 ## 配置生成逻辑
 
 `src/core/configGenerator.ts` 中的 `generateClaudeConfig` 函数：
 
 ```typescript
+const CLAUDE_CODE_ENV_KEYS = [
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  'CLAUDE_CODE_SUBAGENT_MODEL',
+  'CLAUDE_CODE_EFFORT_LEVEL',
+] as const;
+
+const envWithoutClaudeCode = { ...(existingSettings.env || {}) };
+for (const key of CLAUDE_CODE_ENV_KEYS) {
+  delete envWithoutClaudeCode[key];
+}
+
 const newSettings: ClaudeSettings = {
   ...existingSettings,
   env: {
-    ...(existingSettings.env || {}),
+    ...envWithoutClaudeCode,
     ANTHROPIC_BASE_URL: config.baseURL,
     ANTHROPIC_AUTH_TOKEN: config.apiKey,
     ANTHROPIC_MODEL: config.model,
 
-    // 条件添加额外环境变量
     ...(config.claudeCodeSettings?.defaultOpusModel && {
       ANTHROPIC_DEFAULT_OPUS_MODEL: config.claudeCodeSettings.defaultOpusModel,
     }),
@@ -183,54 +198,56 @@ const newSettings: ClaudeSettings = {
 ```
 
 关键点：
-- 只有当字段有值时才设置对应环境变量
-- 使用展开运算符动态添加，避免硬编码 undefined 值
+- 每次生成前先清理 5 个 Claude Code 扩展 env key，避免历史残留
+- 只有 Profile 对应字段有值时才写入环境变量
+- 其他非 cce 管理的 env 字段保持不变
 
 ## CLI 交互设计
 
 ### provider add 命令
 
 新增交互步骤：
-1. 选择 vendor（从预定义列表选择）
-2. 可选配置 Claude Code Settings（询问是否配置，如果"是"则逐个询问 5 个字段）
+1. 选择 vendor（从预定义列表选择，默认必填）
+2. 不询问 `claudeCodeSettings`
 
 ### provider edit 命令
 
-允许修改 vendor 和 claudeCodeSettings 字段。
+允许修改 vendor 字段；不支持修改 `claudeCodeSettings`（因为 Provider 不存该字段）。
 
 ### create 命令（创建 Profile）
 
 可选询问：
-- 如果 Provider 定义了 claudeCodeSettings，询问是否覆盖
-- 如果选择覆盖，逐个询问要覆盖的字段
+- 是否配置 Claude Code Settings（高级配置）
+- 如果选择配置，逐个询问 5 个字段
 
 ### edit 命令（编辑 Profile）
 
-允许修改 claudeCodeSettings 覆盖值。
+允许修改 `claudeCodeSettings` 覆盖值（Profile 级）。
 
 ## 文件修改清单
 
 | 文件 | 修改内容 |
 |------|----------|
-| `src/types/index.ts` | 新增 VendorType、ClaudeCodeSettings，扩展 Provider、Profile、EffectiveConfig、ClaudeEnvConfig |
-| `src/core/switch.ts` | resolveConfig 函数合并 claudeCodeSettings |
-| `src/core/configGenerator.ts` | generateClaudeConfig 添加额外环境变量 |
-| `src/core/provider.ts` | 新增 vendor 验证逻辑 |
-| `src/commands/provider.ts` | provider add/edit 交互增加 vendor 和 claudeCodeSettings 询问 |
-| `src/commands/create.ts` | Profile 创建时可选覆盖 claudeCodeSettings |
+| `src/types/index.ts` | 新增 VendorType、ClaudeCodeEffortLevel、ProfileClaudeCodeSettings，扩展 Provider、Profile、EffectiveConfig、ClaudeEnvConfig |
+| `src/core/switch.ts` | resolveConfig 直接读取 Profile 的 claudeCodeSettings |
+| `src/core/configGenerator.ts` | generateClaudeConfig 先清理再写入扩展环境变量 |
+| `src/core/provider.ts` | 新增 vendor 验证逻辑（新增 Provider 交互默认必填） |
+| `src/commands/provider.ts` | provider add/edit 交互仅处理 vendor，不处理 claudeCodeSettings |
+| `src/commands/create.ts` | Profile 创建时可选配置 claudeCodeSettings |
 | `src/commands/edit.ts` | Profile 编辑时允许修改 claudeCodeSettings |
 
 ## 验证方式
 
 实现完成后验证步骤：
-1. 创建 DeepSeek Provider，设置 vendor='deepseek' 和 claudeCodeSettings
-2. 创建 Profile，可选择覆盖 claudeCodeSettings
+1. 创建 DeepSeek Provider，仅设置 vendor='deepseek'
+2. 创建 Profile，配置 claudeCodeSettings
 3. 执行 `cce use <profile>`
-4. 检查 `~/.claude/settings.json` 是否包含所有预期的环境变量
-5. 验证 OpenCode 配置未受影响
+4. 检查 `~/.claude/settings.json` 是否包含预期扩展环境变量
+5. 修改 Profile 移除部分字段，再次 `use`，确认对应 key 被清理
+6. 验证 OpenCode 配置未受影响
 
 ## 风险与限制
 
-- vendor 字段为可选，不影响现有 Provider
-- claudeCodeSettings 为可选，不设置时行为与现在一致
+- `vendor` 为兼容历史数据保留可选；新增交互默认要求填写
+- `claudeCodeSettings` 完全在 Profile 侧管理，可能导致同 Provider 下多个 Profile 重复配置
 - OpenCode 配置生成不受影响

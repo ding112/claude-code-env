@@ -48,7 +48,16 @@ const VENDOR_OPTIONS = [
 ] as const;
 
 export function sanitizeVendorInput(input: string): VendorType {
-  return input as VendorType;
+  const validVendors: VendorType[] = [
+    'deepseek',
+    'volcengine',
+    'tencent',
+    'alibaba',
+    'openai',
+    'anthropic',
+    'custom',
+  ];
+  return validVendors.includes(input as VendorType) ? (input as VendorType) : 'custom';
 }
 
 function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthropic-compatible' | 'custom' {

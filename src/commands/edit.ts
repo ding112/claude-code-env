@@ -120,6 +120,7 @@ export async function editCommand(name: string): Promise<void> {
           name: 'effortLevel',
           message: 'Effort Level (可选):',
           choices: [{ name: '不设置', value: '' }, ...EFFORT_LEVEL_OPTIONS],
+          default: existing.effortLevel || '',
         },
       ]);
 

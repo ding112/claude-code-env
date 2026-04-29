@@ -54,6 +54,14 @@ export function validateProfile(
   // Claude Code Settings 校验
   if (data.claudeCodeSettings !== undefined) {
     const s = data.claudeCodeSettings;
+    if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+      errors.push({
+        field: 'claudeCodeSettings',
+        message: 'claudeCodeSettings 必须是对象',
+      });
+      return errors;
+    }
+
     const effortLevels = ['low', 'medium', 'high', 'max'] as const;
 
     const stringFields: Array<keyof NonNullable<ProfileClaudeCodeSettings>> = [
