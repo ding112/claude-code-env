@@ -5,11 +5,22 @@
 // Provider 类型
 export type ProviderType = 'openai-compatible' | 'anthropic-compatible' | 'custom';
 
+// Vendor 类型（供应商标识）
+export type VendorType =
+  | 'deepseek'
+  | 'volcengine'
+  | 'tencent'
+  | 'alibaba'
+  | 'openai'
+  | 'anthropic'
+  | 'custom';
+
 // Provider 配置（全局共享）
 export interface Provider {
   name: string;                    // 唯一标识
   displayName: string;            // 显示名称
   type: ProviderType;              // Provider 类型
+  vendor?: VendorType;             // 供应商标识（可选）
 
   // 连接配置
   baseURL: string;
