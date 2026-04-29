@@ -510,14 +510,16 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         }
       }
 
-      // 验证 vendor 与 type 的兼容性
+      // 验证 vendor 为必填（创建时已验证，编辑时若历史数据无 vendor 需补全）
       const finalVendor = vendor !== undefined ? vendor as VendorType : existing.vendor;
-      if (finalVendor) {
-        const allowedVendors = PROVIDER_VENDOR_OPTIONS[finalType];
-        if (!allowedVendors.includes(finalVendor)) {
-          res.status(400).json({ error: `类型 ${finalType} 不支持 vendor: ${finalVendor}` });
-          return;
-        }
+      if (!finalVendor) {
+        res.status(400).json({ error: 'vendor 为必填项，请补选 vendor' });
+        return;
+      }
+      const allowedVendors = PROVIDER_VENDOR_OPTIONS[finalType];
+      if (!allowedVendors.includes(finalVendor)) {
+        res.status(400).json({ error: `类型 ${finalType} 不支持 vendor: ${finalVendor}` });
+        return;
       }
 
       // 验证 baseURL 格式

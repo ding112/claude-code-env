@@ -372,7 +372,7 @@ function renderProfiles() {
 
   elements.profilesTbody.innerHTML = profiles.map(profile => {
     const isActive = profile.isActive;
-    const model = profile.model || profile.defaultModel || '-;
+    const model = profile.model || profile.defaultModel || '-';
 
     return `
       <tr class="${isActive ? 'active-row' : ''}">
