@@ -92,6 +92,11 @@ export interface ClaudeEnvConfig {
   ANTHROPIC_BASE_URL: string;
   ANTHROPIC_AUTH_TOKEN: string;
   ANTHROPIC_MODEL: string;
+  ANTHROPIC_DEFAULT_OPUS_MODEL?: string;
+  ANTHROPIC_DEFAULT_SONNET_MODEL?: string;
+  ANTHROPIC_DEFAULT_HAIKU_MODEL?: string;
+  CLAUDE_CODE_SUBAGENT_MODEL?: string;
+  CLAUDE_CODE_EFFORT_LEVEL?: ClaudeCodeEffortLevel;
 }
 
 export interface ClaudeSettings {
