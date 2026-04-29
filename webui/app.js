@@ -168,11 +168,17 @@ function collectClaudeCodeSettings(prefix) {
 function applyClaudeCodeSettingsToForm(prefix, settings) {
   if (!settings) return;
 
-  document.getElementById(`${prefix}-default-opus-model`)?.value = settings.defaultOpusModel || '';
-  document.getElementById(`${prefix}-default-sonnet-model`)?.value = settings.defaultSonnetModel || '';
-  document.getElementById(`${prefix}-default-haiku-model`)?.value = settings.defaultHaikuModel || '';
-  document.getElementById(`${prefix}-subagent-model`)?.value = settings.subagentModel || '';
-  document.getElementById(`${prefix}-effort-level`)?.value = settings.effortLevel || '';
+  const opusEl = document.getElementById(`${prefix}-default-opus-model`);
+  const sonnetEl = document.getElementById(`${prefix}-default-sonnet-model`);
+  const haikuEl = document.getElementById(`${prefix}-default-haiku-model`);
+  const subagentEl = document.getElementById(`${prefix}-subagent-model`);
+  const effortEl = document.getElementById(`${prefix}-effort-level`);
+
+  if (opusEl) opusEl.value = settings.defaultOpusModel || '';
+  if (sonnetEl) sonnetEl.value = settings.defaultSonnetModel || '';
+  if (haikuEl) haikuEl.value = settings.defaultHaikuModel || '';
+  if (subagentEl) subagentEl.value = settings.subagentModel || '';
+  if (effortEl) effortEl.value = settings.effortLevel || '';
 }
 
 // HTML 转义防止 XSS
