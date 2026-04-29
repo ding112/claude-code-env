@@ -9,12 +9,6 @@ import type { Profile, Provider, ProviderType, VendorType, ProfileClaudeCodeSett
 // WebUI 静态文件目录
 const WEBUI_DIR = path.resolve(__dirname, '..', '..', 'webui');
 
-// Provider type 到 vendor 的兼容映射
-const PROVIDER_VENDOR_OPTIONS: Record<ProviderType, VendorType[]> = {
-  'openai-compatible': ['deepseek', 'volcengine', 'tencent', 'alibaba', 'openai', 'custom'],
-  'anthropic-compatible': ['anthropic', 'custom'],
-  custom: ['deepseek', 'volcengine', 'tencent', 'alibaba', 'openai', 'anthropic', 'custom'],
-};
 
 /**
  * 清理并验证 Claude Code 高级设置输入
@@ -407,13 +401,6 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         return;
       }
 
-      // 验证 vendor 与 type 的兼容性
-      const allowedVendors = PROVIDER_VENDOR_OPTIONS[type as ProviderType];
-      if (!allowedVendors.includes(vendor as VendorType)) {
-        res.status(400).json({ error: `类型 ${type} 不支持 vendor: ${vendor}` });
-        return;
-      }
-
       // 验证名称格式，防止路径遍历攻击
       if (name.includes('..') || name.includes('/') || name.includes('\\')) {
         res.status(400).json({ error: '名称包含非法字符' });
@@ -514,11 +501,6 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       const finalVendor = vendor !== undefined ? vendor as VendorType : existing.vendor;
       if (!finalVendor) {
         res.status(400).json({ error: 'vendor 为必填项，请补选 vendor' });
-        return;
-      }
-      const allowedVendors = PROVIDER_VENDOR_OPTIONS[finalType];
-      if (!allowedVendors.includes(finalVendor)) {
-        res.status(400).json({ error: `类型 ${finalType} 不支持 vendor: ${finalVendor}` });
         return;
       }
 

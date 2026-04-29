@@ -20,7 +20,6 @@
       </div>
       <div class="header-actions">
         <button id="refresh-btn" class="btn btn-secondary">刷新</button>
-        <button id="create-btn" class="btn btn-primary">新建配置</button>
       </div>
     </header>
 
@@ -42,6 +41,7 @@
       <section id="profiles-section" class="section">
         <div class="section-header">
           <h2>配置列表</h2>
+          <button id="create-btn" class="btn btn-primary">新建配置</button>
         </div>
         <div class="table-container">
           <table id="profiles-table" class="table">
@@ -76,7 +76,7 @@
               <tr>
                 <th>名称</th>
                 <th>类型</th>
-                <th>Vendor</th>
+                <th>供应商</th>
                 <th>Base URL</th>
                 <th>模型数</th>
                 <th>操作</th>
@@ -216,6 +216,14 @@
           </div>
 
           <div class="form-group">
+            <label for="provider-vendor">供应商 *</label>
+            <select id="provider-vendor" name="vendor" required>
+              <option value="">请选择供应商</option>
+            </select>
+            <small class="form-hint">供应商类型，用于 Claude Code 高级配置</small>
+          </div>
+
+          <div class="form-group">
             <label for="provider-type">类型 *</label>
             <select id="provider-type" name="type" required>
               <option value="">请选择类型</option>
@@ -223,14 +231,6 @@
               <option value="anthropic-compatible">Anthropic 接口协议</option>
               <option value="custom">自定义</option>
             </select>
-          </div>
-
-          <div class="form-group">
-            <label for="provider-vendor">Vendor *</label>
-            <select id="provider-vendor" name="vendor" required>
-              <option value="">请先选择类型</option>
-            </select>
-            <small class="form-hint">供应商类型，用于 Claude Code 高级配置</small>
           </div>
 
           <div class="form-group">

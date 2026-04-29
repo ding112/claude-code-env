@@ -1,30 +1,16 @@
 // API 基础路径
 const API_BASE = '/api';
 
-// Provider type 到 vendor 的兼容映射
-const PROVIDER_VENDOR_OPTIONS = {
-  'openai-compatible': [
-    { name: 'DeepSeek', value: 'deepseek' },
-    { name: '火山引擎', value: 'volcengine' },
-    { name: '腾讯', value: 'tencent' },
-    { name: '阿里', value: 'alibaba' },
-    { name: 'OpenAI', value: 'openai' },
-    { name: '自定义', value: 'custom' },
-  ],
-  'anthropic-compatible': [
-    { name: 'Anthropic', value: 'anthropic' },
-    { name: '自定义', value: 'custom' },
-  ],
-  'custom': [
-    { name: 'DeepSeek', value: 'deepseek' },
-    { name: '火山引擎', value: 'volcengine' },
-    { name: '腾讯', value: 'tencent' },
-    { name: '阿里', value: 'alibaba' },
-    { name: 'OpenAI', value: 'openai' },
-    { name: 'Anthropic', value: 'anthropic' },
-    { name: '自定义', value: 'custom' },
-  ],
-};
+// 所有可用的 Vendor 选项（不与类型联动）
+const ALL_VENDORS = [
+  { name: 'DeepSeek', value: 'deepseek' },
+  { name: '火山引擎', value: 'volcengine' },
+  { name: '腾讯', value: 'tencent' },
+  { name: '阿里', value: 'alibaba' },
+  { name: 'OpenAI', value: 'openai' },
+  { name: 'Anthropic', value: 'anthropic' },
+  { name: '自定义', value: 'custom' },
+];
 
 // Vendor 显示名称映射
 const VENDOR_DISPLAY_NAMES = {
@@ -113,20 +99,13 @@ function getProviderTypeBadge(type) {
   return badges[type] || `<span class="badge">${escapeHtml(type)}</span>`;
 }
 
-// 更新 Provider Vendor 下拉框选项
+// 更新 Provider Vendor 下拉框选项（不依赖类型选择）
 function updateProviderVendorOptions(selectedVendor = null) {
-  const type = elements.providerTypeSelect.value;
   const vendorSelect = elements.providerVendorSelect;
 
-  vendorSelect.innerHTML = '<option value="">请选择 Vendor</option>';
+  vendorSelect.innerHTML = '<option value="">请选择供应商</option>';
 
-  if (!type) {
-    vendorSelect.innerHTML = '<option value="">请先选择类型</option>';
-    return;
-  }
-
-  const options = PROVIDER_VENDOR_OPTIONS[type] || [];
-  options.forEach(opt => {
+  ALL_VENDORS.forEach(opt => {
     const option = document.createElement('option');
     option.value = opt.value;
     option.textContent = opt.name;
@@ -640,7 +619,7 @@ async function submitProviderForm(event) {
   event.preventDefault();
 
   const formData = new FormData(elements.providerForm);
-  const name = formData.get('name')?.toString().trim();
+  const name = editingProviderName || formData.get('name')?.toString().trim();
   const displayName = formData.get('displayName')?.toString().trim();
   const type = formData.get('type')?.toString().trim();
   const vendor = formData.get('vendor')?.toString().trim();
@@ -649,13 +628,21 @@ async function submitProviderForm(event) {
   const modelsStr = formData.get('models')?.toString().trim();
   const defaultModel = formData.get('defaultModel')?.toString().trim();
 
-  // 验证
-  if (!name || !displayName || !type || !vendor || !baseURL || !apiKey || !modelsStr || !defaultModel) {
-    showError('请填写所有必填项');
+  // 验证（编辑模式跳过 name，因为名称不可修改）
+  const missing = [];
+  if (!editingProviderName && !name) missing.push('配置名称');
+  if (!type) missing.push('类型');
+  if (!vendor) missing.push('供应商');
+  if (!baseURL) missing.push('Base URL');
+  if (!apiKey) missing.push('API Key');
+  if (!modelsStr) missing.push('可用模型');
+  if (!defaultModel) missing.push('默认模型');
+  if (missing.length > 0) {
+    showError('请填写以下必填项：' + missing.join('、'));
     return;
   }
 
-  // 验证名称格式
+  // 验证名称格式（仅创建模式）
   if (!editingProviderName && !/^[a-zA-Z0-9_-]+$/.test(name)) {
     showError('名称只能包含字母、数字、下划线和连字符');
     return;
@@ -933,8 +920,7 @@ function init() {
   // Provider 可用模型输入变化时更新默认模型下拉框
   elements.providerModelsInput.addEventListener('input', updateProviderDefaultModelSelect);
 
-  // Provider 类型变化时更新 vendor 下拉框
-  elements.providerTypeSelect.addEventListener('change', updateProviderVendorOptions);
+  // Provider 类型变化不再联动 vendor 下拉框
 }
 
 // 启动
