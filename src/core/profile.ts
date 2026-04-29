@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { logger } from '../utils/logger.js';
 import { validateName } from '../utils/validation.js';
-import type { Profile, Provider, EffectiveConfig, ValidationError } from '../types/index.js';
+import type { Profile, Provider, EffectiveConfig, ValidationError, ProfileClaudeCodeSettings } from '../types/index.js';
 import { PROFILES_DIR } from './config.js';
 
 // ============================================================================
@@ -49,6 +49,44 @@ export function validateProfile(
 
   if (data.model !== undefined && typeof data.model !== 'string') {
     errors.push({ field: 'model', message: 'Model 必须是字符串' });
+  }
+
+  // Claude Code Settings 校验
+  if (data.claudeCodeSettings !== undefined) {
+    const s = data.claudeCodeSettings;
+    if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+      errors.push({
+        field: 'claudeCodeSettings',
+        message: 'claudeCodeSettings 必须是对象',
+      });
+      return errors;
+    }
+
+    const effortLevels = ['low', 'medium', 'high', 'max'] as const;
+
+    const stringFields: Array<keyof NonNullable<ProfileClaudeCodeSettings>> = [
+      'defaultOpusModel',
+      'defaultSonnetModel',
+      'defaultHaikuModel',
+      'subagentModel',
+    ];
+
+    for (const field of stringFields) {
+      const value = s[field];
+      if (value !== undefined && typeof value !== 'string') {
+        errors.push({
+          field: `claudeCodeSettings.${field}`,
+          message: `${field} 必须是字符串`,
+        });
+      }
+    }
+
+    if (s.effortLevel !== undefined && !effortLevels.includes(s.effortLevel as typeof effortLevels[number])) {
+      errors.push({
+        field: 'claudeCodeSettings.effortLevel',
+        message: `effortLevel 必须是: ${effortLevels.join(', ')}`,
+      });
+    }
   }
 
   return errors;

@@ -20,7 +20,6 @@
       </div>
       <div class="header-actions">
         <button id="refresh-btn" class="btn btn-secondary">刷新</button>
-        <button id="create-btn" class="btn btn-primary">新建配置</button>
       </div>
     </header>
 
@@ -42,6 +41,7 @@
       <section id="profiles-section" class="section">
         <div class="section-header">
           <h2>配置列表</h2>
+          <button id="create-btn" class="btn btn-primary">新建配置</button>
         </div>
         <div class="table-container">
           <table id="profiles-table" class="table">
@@ -76,6 +76,7 @@
               <tr>
                 <th>名称</th>
                 <th>类型</th>
+                <th>供应商</th>
                 <th>Base URL</th>
                 <th>模型数</th>
                 <th>操作</th>
@@ -83,7 +84,7 @@
             </thead>
             <tbody id="providers-tbody">
               <tr>
-                <td colspan="5" class="loading-row">加载中...</td>
+                <td colspan="6" class="loading-row">加载中...</td>
               </tr>
             </tbody>
           </table>
@@ -136,6 +137,36 @@
             <input type="text" id="create-model" name="model" placeholder="选择 Provider 后可用">
           </div>
 
+          <div class="fields-group">
+            <h3>Claude Code 高级设置（可选）</h3>
+            <div class="form-group">
+              <label for="create-default-opus-model">默认 Opus 模型</label>
+              <input type="text" id="create-default-opus-model" name="defaultOpusModel" placeholder="例如: claude-opus-4-20250514">
+            </div>
+            <div class="form-group">
+              <label for="create-default-sonnet-model">默认 Sonnet 模型</label>
+              <input type="text" id="create-default-sonnet-model" name="defaultSonnetModel" placeholder="例如: claude-sonnet-4-20250514">
+            </div>
+            <div class="form-group">
+              <label for="create-default-haiku-model">默认 Haiku 模型</label>
+              <input type="text" id="create-default-haiku-model" name="defaultHaikuModel" placeholder="例如: claude-3-5-haiku-20241022">
+            </div>
+            <div class="form-group">
+              <label for="create-subagent-model">Subagent 模型</label>
+              <input type="text" id="create-subagent-model" name="subagentModel" placeholder="例如: claude-sonnet-4-20250514">
+            </div>
+            <div class="form-group">
+              <label for="create-effort-level">Effort Level</label>
+              <select id="create-effort-level" name="effortLevel">
+                <option value="">不设置</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="max">max</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-group checkbox-group">
             <label>
               <input type="checkbox" id="create-use-now" name="use-now" checked>
@@ -185,6 +216,14 @@
           </div>
 
           <div class="form-group">
+            <label for="provider-vendor">供应商 *</label>
+            <select id="provider-vendor" name="vendor" required>
+              <option value="">请选择供应商</option>
+            </select>
+            <small class="form-hint">供应商类型，用于 Claude Code 高级配置</small>
+          </div>
+
+          <div class="form-group">
             <label for="provider-type">类型 *</label>
             <select id="provider-type" name="type" required>
               <option value="">请选择类型</option>
@@ -221,6 +260,76 @@
       <div class="modal-footer">
         <button id="provider-cancel" class="btn btn-secondary">取消</button>
         <button id="provider-submit" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="edit-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="edit-modal-title">编辑配置</h2>
+        <button id="close-edit" class="btn-icon" title="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-form">
+          <div class="form-group">
+            <label for="edit-name">配置名称 *</label>
+            <input type="text" id="edit-name" name="name" required pattern="[a-zA-Z0-9_-]+" placeholder="例如: work、home">
+          </div>
+
+          <div class="form-group">
+            <label for="edit-description">描述</label>
+            <input type="text" id="edit-description" name="description" placeholder="例如: 工作配置">
+          </div>
+
+          <div class="form-group">
+            <label for="edit-provider">Provider *</label>
+            <select id="edit-provider" name="provider" required>
+              <option value="">加载中...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-model">模型 (可选，留空使用默认)</label>
+            <input type="text" id="edit-model" name="model" placeholder="选择 Provider 后可用">
+          </div>
+
+          <div class="fields-group">
+            <h3>Claude Code 高级设置（可选）</h3>
+            <div class="form-group">
+              <label for="edit-default-opus-model">默认 Opus 模型</label>
+              <input type="text" id="edit-default-opus-model" name="defaultOpusModel" placeholder="例如: claude-opus-4-20250514">
+            </div>
+            <div class="form-group">
+              <label for="edit-default-sonnet-model">默认 Sonnet 模型</label>
+              <input type="text" id="edit-default-sonnet-model" name="defaultSonnetModel" placeholder="例如: claude-sonnet-4-20250514">
+            </div>
+            <div class="form-group">
+              <label for="edit-default-haiku-model">默认 Haiku 模型</label>
+              <input type="text" id="edit-default-haiku-model" name="defaultHaikuModel" placeholder="例如: claude-3-5-haiku-20241022">
+            </div>
+            <div class="form-group">
+              <label for="edit-subagent-model">Subagent 模型</label>
+              <input type="text" id="edit-subagent-model" name="subagentModel" placeholder="例如: claude-sonnet-4-20250514">
+            </div>
+            <div class="form-group">
+              <label for="edit-effort-level">Effort Level</label>
+              <select id="edit-effort-level" name="effortLevel">
+                <option value="">不设置</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="max">max</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="edit-cancel" class="btn btn-secondary">取消</button>
+        <button id="edit-submit" class="btn btn-primary">保存</button>
       </div>
     </div>
   </div>

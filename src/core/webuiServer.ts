@@ -4,10 +4,33 @@ import { logger } from '../utils/logger.js';
 import { listProfiles, getProfile, saveProfile, deleteProfile, getActiveProfile } from './profile.js';
 import { listProviders, getProvider, saveProvider, deleteProvider, isProviderInUse, getProviderUsage } from './provider.js';
 import { switchProfile } from './switch.js';
-import type { Profile, Provider, ProviderType } from '../types/index.js';
+import type { Profile, Provider, ProviderType, VendorType, ProfileClaudeCodeSettings } from '../types/index.js';
 
 // WebUI 静态文件目录
 const WEBUI_DIR = path.resolve(__dirname, '..', '..', 'webui');
+
+
+/**
+ * 清理并验证 Claude Code 高级设置输入
+ */
+function sanitizeClaudeCodeSettingsInput(input: unknown): ProfileClaudeCodeSettings | undefined {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return undefined;
+  const source = input as Record<string, unknown>;
+  const cleaned: ProfileClaudeCodeSettings = {
+    ...(typeof source.defaultOpusModel === 'string' && source.defaultOpusModel.trim()
+      ? { defaultOpusModel: source.defaultOpusModel.trim() } : {}),
+    ...(typeof source.defaultSonnetModel === 'string' && source.defaultSonnetModel.trim()
+      ? { defaultSonnetModel: source.defaultSonnetModel.trim() } : {}),
+    ...(typeof source.defaultHaikuModel === 'string' && source.defaultHaikuModel.trim()
+      ? { defaultHaikuModel: source.defaultHaikuModel.trim() } : {}),
+    ...(typeof source.subagentModel === 'string' && source.subagentModel.trim()
+      ? { subagentModel: source.subagentModel.trim() } : {}),
+    ...(source.effortLevel === 'low' || source.effortLevel === 'medium'
+      || source.effortLevel === 'high' || source.effortLevel === 'max'
+      ? { effortLevel: source.effortLevel } : {}),
+  };
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+}
 
 /**
  * 过滤 Provider 敏感字段，返回安全的 Provider 信息
@@ -17,6 +40,7 @@ function sanitizeProvider(provider: Provider) {
     name: provider.name,
     displayName: provider.displayName,
     type: provider.type,
+    vendor: provider.vendor,
     baseURL: provider.baseURL,
     models: provider.models,
     defaultModel: provider.defaultModel,
@@ -135,7 +159,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   // 创建 profile
   app.post('/api/profiles', async (req, res) => {
     try {
-      const { name, description, provider, model, useNow } = req.body;
+      const { name, description, provider, model, useNow, claudeCodeSettings } = req.body;
 
       if (!name || !provider) {
         res.status(400).json({ error: 'name 和 provider 为必填项' });
@@ -180,12 +204,16 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         return;
       }
 
+      // 清理并验证 claudeCodeSettings
+      const sanitizedClaudeCodeSettings = sanitizeClaudeCodeSettingsInput(claudeCodeSettings);
+
       const now = new Date().toISOString();
       const profile: Profile = {
         name,
         description,
         provider,
         model: model || undefined,
+        claudeCodeSettings: sanitizedClaudeCodeSettings,
         createdAt: now,
         updatedAt: now,
       };
@@ -209,7 +237,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   app.put('/api/profiles/:name', async (req, res) => {
     try {
       const oldName = req.params.name;
-      const { name, description, provider, model } = req.body;
+      const { name, description, provider, model, claudeCodeSettings } = req.body;
 
       const existing = await getProfile(oldName);
       if (!existing) {
@@ -236,11 +264,17 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         await deleteProfile(oldName);
       }
 
+      // 清理并验证 claudeCodeSettings
+      const sanitizedClaudeCodeSettings = claudeCodeSettings !== undefined
+        ? sanitizeClaudeCodeSettingsInput(claudeCodeSettings)
+        : existing.claudeCodeSettings;
+
       const updatedProfile: Profile = {
         name: name || oldName,
         description: description ?? existing.description,
         provider: provider || existing.provider,
         model: model ?? existing.model,
+        claudeCodeSettings: sanitizedClaudeCodeSettings,
         createdAt: existing.createdAt,
         updatedAt: new Date().toISOString(),
       };
@@ -346,11 +380,24 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   // 创建 provider
   app.post('/api/providers', async (req, res) => {
     try {
-      const { name, displayName, type, baseURL, apiKey, models, defaultModel } = req.body;
+      const { name, displayName, type, vendor, baseURL, apiKey, models, defaultModel } = req.body;
 
       // 验证必填字段 (displayName 可选)
       if (!name || !type || !baseURL || !apiKey || !models || !defaultModel) {
         res.status(400).json({ error: 'name, type, baseURL, apiKey, models, defaultModel 为必填项' });
+        return;
+      }
+
+      // 验证 type
+      const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
+      if (!validTypes.includes(type)) {
+        res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
+        return;
+      }
+
+      // 验证 vendor 为必填
+      if (!vendor) {
+        res.status(400).json({ error: 'vendor 为必填项' });
         return;
       }
 
@@ -363,13 +410,6 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       // 验证名称长度
       if (name.length > 64) {
         res.status(400).json({ error: '名称长度不能超过64个字符' });
-        return;
-      }
-
-      // 验证 type
-      const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
-      if (!validTypes.includes(type)) {
-        res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
         return;
       }
 
@@ -415,6 +455,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         name,
         displayName: displayName?.trim() || name, // displayName 可选，默认使用 name
         type,
+        vendor,
         baseURL: baseURL.trim().replace(/\/+$/, ''), // 移除末尾斜杠
         apiKey: apiKey.trim(),
         models: cleanedModels,
@@ -436,7 +477,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   app.put('/api/providers/:name', async (req, res) => {
     try {
       const name = req.params.name;
-      const { displayName, type, baseURL, apiKey, models, defaultModel } = req.body;
+      const { displayName, type, vendor, baseURL, apiKey, models, defaultModel } = req.body;
 
       const existing = await getProvider(name);
       if (!existing) {
@@ -444,13 +485,23 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         return;
       }
 
+      // 确定最终的 type
+      const finalType: ProviderType = (type as ProviderType) ?? existing.type;
+
       // 验证 type
       if (type) {
         const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
-        if (!validTypes.includes(type)) {
+        if (!validTypes.includes(type as ProviderType)) {
           res.status(400).json({ error: `类型必须是: ${validTypes.join(', ')}` });
           return;
         }
+      }
+
+      // 验证 vendor 为必填（创建时已验证，编辑时若历史数据无 vendor 需补全）
+      const finalVendor = vendor !== undefined ? vendor as VendorType : existing.vendor;
+      if (!finalVendor) {
+        res.status(400).json({ error: 'vendor 为必填项，请补选 vendor' });
+        return;
       }
 
       // 验证 baseURL 格式
@@ -490,7 +541,8 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       const updatedProvider: Provider = {
         name,
         displayName: displayName?.trim() ?? existing.displayName,
-        type: type ?? existing.type,
+        type: finalType,
+        vendor: finalVendor,
         baseURL: baseURL ? baseURL.trim().replace(/\/+$/, '') : existing.baseURL,
         apiKey: apiKey?.trim() ?? existing.apiKey,
         models: cleanedModels,

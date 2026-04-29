@@ -1,8 +1,41 @@
 import inquirer from 'inquirer';
 import { logger } from '../utils/logger.js';
-import type { Profile } from '../types/index.js';
+import type { Profile, ProfileClaudeCodeSettings, ClaudeCodeEffortLevel } from '../types/index.js';
 import { saveProfile, getProfile } from '../core/profile.js';
 import { listProviders } from '../core/provider.js';
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+const EFFORT_LEVEL_OPTIONS = [
+  { name: 'Low', value: 'low' },
+  { name: 'Medium', value: 'medium' },
+  { name: 'High', value: 'high' },
+  { name: 'Max', value: 'max' },
+] as const;
+
+export function sanitizeClaudeCodeSettingsInput(input: {
+  defaultOpusModel?: string;
+  defaultSonnetModel?: string;
+  defaultHaikuModel?: string;
+  subagentModel?: string;
+  effortLevel?: ClaudeCodeEffortLevel | '';
+}): ProfileClaudeCodeSettings | undefined {
+  const settings: ProfileClaudeCodeSettings = {
+    defaultOpusModel: input.defaultOpusModel?.trim() || undefined,
+    defaultSonnetModel: input.defaultSonnetModel?.trim() || undefined,
+    defaultHaikuModel: input.defaultHaikuModel?.trim() || undefined,
+    subagentModel: input.subagentModel?.trim() || undefined,
+    effortLevel: (input.effortLevel || undefined) as ClaudeCodeEffortLevel | undefined,
+  };
+
+  return Object.values(settings).some((v) => v !== undefined) ? settings : undefined;
+}
+
+// ============================================================================
+// Create Command
+// ============================================================================
 
 export async function createCommand(name: string): Promise<void> {
   try {
@@ -19,11 +52,11 @@ export async function createCommand(name: string): Promise<void> {
 
     if (providers.length === 0) {
       console.log('❌ 还没有配置任何 Provider');
-      console.log('使用 `cce provider add <type>` 先添加一个 Provider');
+      console.log('使用 `cce provider add` 先添加一个 Provider');
       process.exit(1);
     }
 
-    // 询问
+    // 询问基本信息
     const answers = await inquirer.prompt([
       {
         type: 'list',
@@ -69,12 +102,57 @@ export async function createCommand(name: string): Promise<void> {
       model = selectedModel;
     }
 
+    // 询问 Claude Code 高级配置
+    const { configureAdvanced } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'configureAdvanced',
+        message: '是否配置 Claude Code 高级设置?',
+        default: false,
+      },
+    ]);
+
+    let claudeCodeSettings: ProfileClaudeCodeSettings | undefined;
+    if (configureAdvanced) {
+      const advancedAnswers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'defaultOpusModel',
+          message: '默认 Opus 模型 (可选):',
+        },
+        {
+          type: 'input',
+          name: 'defaultSonnetModel',
+          message: '默认 Sonnet 模型 (可选):',
+        },
+        {
+          type: 'input',
+          name: 'defaultHaikuModel',
+          message: '默认 Haiku 模型 (可选):',
+        },
+        {
+          type: 'input',
+          name: 'subagentModel',
+          message: 'Subagent 模型 (可选):',
+        },
+        {
+          type: 'list',
+          name: 'effortLevel',
+          message: 'Effort Level (可选):',
+          choices: [{ name: '不设置', value: '' }, ...EFFORT_LEVEL_OPTIONS],
+        },
+      ]);
+
+      claudeCodeSettings = sanitizeClaudeCodeSettingsInput(advancedAnswers);
+    }
+
     const now = new Date().toISOString();
     const profile: Profile = {
       name,
       description: answers.description || undefined,
       provider: answers.provider,
       model,
+      claudeCodeSettings,
       createdAt: now,
       updatedAt: now,
     };
@@ -85,6 +163,9 @@ export async function createCommand(name: string): Promise<void> {
     console.log(`  Provider: ${answers.provider}`);
     if (model) {
       console.log(`  模型: ${model} (覆盖)`);
+    }
+    if (claudeCodeSettings) {
+      console.log(`  Claude Code 高级设置已配置`);
     }
 
     // 询问是否立即使用

@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { logger } from '../utils/logger.js';
 import { validateName } from '../utils/validation.js';
-import type { Provider, ProviderType, ValidationError } from '../types/index.js';
+import type { Provider, ProviderType, ValidationError, VendorType } from '../types/index.js';
 import { PROVIDERS_DIR, PROFILES_DIR } from './config.js';
 
 // ============================================================================
@@ -66,6 +66,19 @@ export function validateProvider(data: Partial<Provider>): ValidationError[] {
   const validTypes: ProviderType[] = ['openai-compatible', 'anthropic-compatible', 'custom'];
   if (!data.type || !validTypes.includes(data.type as ProviderType)) {
     errors.push({ field: 'type', message: `Provider type 必须是: ${validTypes.join(', ')}` });
+  }
+
+  const validVendors: VendorType[] = [
+    'deepseek',
+    'volcengine',
+    'tencent',
+    'alibaba',
+    'openai',
+    'anthropic',
+    'custom',
+  ];
+  if (data.vendor !== undefined && !validVendors.includes(data.vendor as VendorType)) {
+    errors.push({ field: 'vendor', message: `vendor 必须是: ${validVendors.join(', ')}` });
   }
 
   if (!data.baseURL || typeof data.baseURL !== 'string' || data.baseURL.trim() === '') {

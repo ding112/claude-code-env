@@ -589,3 +589,42 @@ body {
   border-radius: 4px;
   word-break: break-all;
 }
+
+/* Advanced settings grid */
+.advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.advanced-grid .form-group {
+  margin-bottom: 0;
+}
+
+/* Edit profile button */
+.btn-edit-profile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  margin-left: 8px;
+}
+
+.btn-edit-profile:hover {
+  background: var(--background);
+}
+
+/* Vendor badge */
+.badge-vendor {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Advanced settings details */
+.advanced-settings-details {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.advanced-settings-details div {
+  margin-top: 4px;
+}

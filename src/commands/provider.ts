@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import open from 'open';
 import { logger } from '../utils/logger.js';
 import { validateName } from '../utils/validation.js';
-import type { Provider } from '../types/index.js';
+import type { Provider, VendorType } from '../types/index.js';
 import {
   listProviders,
   getProvider,
@@ -36,6 +36,30 @@ const TYPE_OPTIONS = [
   { name: '自定义', value: 'custom' },
 ] as const;
 
+// Vendor 选项映射
+const VENDOR_OPTIONS = [
+  { name: 'DeepSeek', value: 'deepseek' },
+  { name: 'Volcengine', value: 'volcengine' },
+  { name: 'Tencent', value: 'tencent' },
+  { name: 'Alibaba', value: 'alibaba' },
+  { name: 'OpenAI', value: 'openai' },
+  { name: 'Anthropic', value: 'anthropic' },
+  { name: 'Custom', value: 'custom' },
+] as const;
+
+export function sanitizeVendorInput(input: string): VendorType {
+  const validVendors: VendorType[] = [
+    'deepseek',
+    'volcengine',
+    'tencent',
+    'alibaba',
+    'openai',
+    'anthropic',
+    'custom',
+  ];
+  return validVendors.includes(input as VendorType) ? (input as VendorType) : 'custom';
+}
+
 function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthropic-compatible' | 'custom' {
   const validTypes = ['openai-compatible', 'anthropic-compatible', 'custom'] as const;
   return validTypes.includes(value as typeof validTypes[number])
@@ -55,6 +79,12 @@ export async function providerAddCommand(): Promise<void> {
         name: 'type',
         message: '选择 Provider 类型:',
         choices: TYPE_OPTIONS,
+      },
+      {
+        type: 'list',
+        name: 'vendor',
+        message: '选择 Vendor (供应商):',
+        choices: VENDOR_OPTIONS,
       },
       {
         type: 'input',
@@ -131,6 +161,7 @@ export async function providerAddCommand(): Promise<void> {
       name: answers.name.trim(),
       displayName: answers.displayName?.trim() || answers.name.trim(),
       type: getProviderTypeFromValue(answers.type),
+      vendor: sanitizeVendorInput(answers.vendor),
       baseURL: answers.baseURL,
       apiKey: answers.apiKey,
       models,
@@ -144,6 +175,7 @@ export async function providerAddCommand(): Promise<void> {
     console.log(`✓ Provider '${provider.name}' 已创建`);
     console.log(`  显示名称: ${provider.displayName}`);
     console.log(`  类型: ${provider.type}`);
+    console.log(`  Vendor: ${provider.vendor}`);
     console.log(`  Base URL: ${provider.baseURL}`);
     console.log(`  模型数: ${provider.models.length}`);
     console.log(`  默认模型: ${provider.defaultModel}`);
@@ -161,7 +193,7 @@ export async function providerListCommand(): Promise<void> {
 
     if (providers.length === 0) {
       console.log('还没有配置任何 Provider');
-      console.log('使用 `cce provider add <type>` 添加一个新的 Provider');
+      console.log('使用 `cce provider add` 添加一个新的 Provider');
       process.exit(0);
     }
 
@@ -174,6 +206,9 @@ export async function providerListCommand(): Promise<void> {
       console.log(`  ${provider.name}`);
       console.log(`    显示名称: ${provider.displayName}`);
       console.log(`    类型: ${provider.type}`);
+      if (provider.vendor) {
+        console.log(`    Vendor: ${provider.vendor}`);
+      }
       console.log(`    Base URL: ${provider.baseURL}`);
       console.log(`    模型 (${provider.models.length}):`);
       for (const model of provider.models) {
@@ -214,6 +249,9 @@ export async function providerShowCommand(name: string): Promise<void> {
     console.log(`Provider: ${provider.name}`);
     console.log(`  显示名称: ${provider.displayName}`);
     console.log(`  类型: ${provider.type}`);
+    if (provider.vendor) {
+      console.log(`  Vendor: ${provider.vendor}`);
+    }
     console.log(`  Base URL: ${provider.baseURL}`);
     console.log(`  API Key: ${maskApiKey(provider.apiKey)}`);
     console.log();

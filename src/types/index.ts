@@ -5,11 +5,22 @@
 // Provider 类型
 export type ProviderType = 'openai-compatible' | 'anthropic-compatible' | 'custom';
 
+// Vendor 类型（供应商标识）
+export type VendorType =
+  | 'deepseek'
+  | 'volcengine'
+  | 'tencent'
+  | 'alibaba'
+  | 'openai'
+  | 'anthropic'
+  | 'custom';
+
 // Provider 配置（全局共享）
 export interface Provider {
   name: string;                    // 唯一标识
   displayName: string;            // 显示名称
   type: ProviderType;              // Provider 类型
+  vendor?: VendorType;             // 供应商标识（可选）
 
   // 连接配置
   baseURL: string;
@@ -27,12 +38,25 @@ export interface Provider {
 // Profile 类型定义（新格式）
 // ============================================================================
 
+// Claude Code Effort Level
+export type ClaudeCodeEffortLevel = 'low' | 'medium' | 'high' | 'max';
+
+// Profile 级 Claude Code 高级配置
+export interface ProfileClaudeCodeSettings {
+  defaultOpusModel?: string;
+  defaultSonnetModel?: string;
+  defaultHaikuModel?: string;
+  subagentModel?: string;
+  effortLevel?: ClaudeCodeEffortLevel;
+}
+
 // 新的 Profile 接口（简化版，不区分 type）
 export interface Profile {
   name: string;
   description?: string;
   provider: string;                // 引用的 Provider name
   model?: string;                  // 可选：覆盖 Provider 的 defaultModel
+  claudeCodeSettings?: ProfileClaudeCodeSettings;  // 可选：Claude Code 高级配置
   createdAt: string;
   updatedAt: string;
 }
@@ -54,6 +78,10 @@ export interface EffectiveConfig {
   providerName: string;
   providerDisplayName: string;
   isModelOverridden: boolean;
+
+  // 扩展信息
+  vendor?: VendorType;
+  claudeCodeSettings?: ProfileClaudeCodeSettings;
 }
 
 // ============================================================================
@@ -64,6 +92,11 @@ export interface ClaudeEnvConfig {
   ANTHROPIC_BASE_URL: string;
   ANTHROPIC_AUTH_TOKEN: string;
   ANTHROPIC_MODEL: string;
+  ANTHROPIC_DEFAULT_OPUS_MODEL?: string;
+  ANTHROPIC_DEFAULT_SONNET_MODEL?: string;
+  ANTHROPIC_DEFAULT_HAIKU_MODEL?: string;
+  CLAUDE_CODE_SUBAGENT_MODEL?: string;
+  CLAUDE_CODE_EFFORT_LEVEL?: ClaudeCodeEffortLevel;
 }
 
 export interface ClaudeSettings {
