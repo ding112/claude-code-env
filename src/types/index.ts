@@ -38,12 +38,25 @@ export interface Provider {
 // Profile 类型定义（新格式）
 // ============================================================================
 
+// Claude Code Effort Level
+export type ClaudeCodeEffortLevel = 'low' | 'medium' | 'high' | 'max';
+
+// Profile 级 Claude Code 高级配置
+export interface ProfileClaudeCodeSettings {
+  defaultOpusModel?: string;
+  defaultSonnetModel?: string;
+  defaultHaikuModel?: string;
+  subagentModel?: string;
+  effortLevel?: ClaudeCodeEffortLevel;
+}
+
 // 新的 Profile 接口（简化版，不区分 type）
 export interface Profile {
   name: string;
   description?: string;
   provider: string;                // 引用的 Provider name
   model?: string;                  // 可选：覆盖 Provider 的 defaultModel
+  claudeCodeSettings?: ProfileClaudeCodeSettings;  // 可选：Claude Code 高级配置
   createdAt: string;
   updatedAt: string;
 }
@@ -65,6 +78,10 @@ export interface EffectiveConfig {
   providerName: string;
   providerDisplayName: string;
   isModelOverridden: boolean;
+
+  // 扩展信息
+  vendor?: VendorType;
+  claudeCodeSettings?: ProfileClaudeCodeSettings;
 }
 
 // ============================================================================
