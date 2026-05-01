@@ -53,19 +53,24 @@ function showError(message) {
   setTimeout(() => elements.errorToast.classList.add('hidden'), 3000);
 }
 
+// Toast 定时器
+let infoToastTimer = null;
+
 // 显示成功提示
 function showSuccess(message) {
+  clearTimeout(infoToastTimer);
   elements.successToast.textContent = message;
   elements.successToast.classList.remove('hidden');
-  setTimeout(() => elements.successToast.classList.add('hidden'), 3000);
+  infoToastTimer = setTimeout(() => elements.successToast.classList.add('hidden'), 3000);
 }
 
 const infoToast = document.getElementById('info-toast');
 
 function showInfo(message) {
+  clearTimeout(infoToastTimer);
   infoToast.textContent = message;
   infoToast.classList.remove('hidden');
-  setTimeout(() => infoToast.classList.add('hidden'), 2500);
+  infoToastTimer = setTimeout(() => infoToast.classList.add('hidden'), 2500);
 }
 
 // 格式化日期
@@ -939,12 +944,12 @@ async function createProfile(event) {
 }
 
 // 初始化
-function init() {
+async function init() {
   // 先加载 Source 模板，这样 Source 下拉框在 Provider 加载后就有数据
-  loadSourceTemplates();
+  await loadSourceTemplates();
 
   // 加载数据
-  Promise.all([loadProviders(), loadCurrent(), loadProfiles()]);
+  await Promise.all([loadProviders(), loadCurrent(), loadProfiles()]);
 
   // 刷新按钮
   document.getElementById('refresh-btn').addEventListener('click', () => {
@@ -986,7 +991,6 @@ function init() {
   document.getElementById('create-cancel').addEventListener('click', closeCreateModal);
   document.querySelector('#create-modal .modal-overlay').addEventListener('click', closeCreateModal);
   elements.createForm.addEventListener('submit', createProfile);
-  document.getElementById('create-submit').addEventListener('click', createProfile);
 
   // Provider 选择变化时更新模型提示
   elements.createProvider.addEventListener('change', updateModelHint);
@@ -996,7 +1000,6 @@ function init() {
   document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
   document.querySelector('#edit-modal .modal-overlay').addEventListener('click', closeEditModal);
   elements.editForm.addEventListener('submit', submitEditProfile);
-  document.getElementById('edit-submit').addEventListener('click', submitEditProfile);
   elements.editProvider.addEventListener('change', updateEditModelHint);
 
   // Provider 创建/编辑弹窗
@@ -1004,7 +1007,6 @@ function init() {
   document.getElementById('provider-cancel').addEventListener('click', closeProviderModal);
   document.querySelector('#provider-modal .modal-overlay').addEventListener('click', closeProviderModal);
   elements.providerForm.addEventListener('submit', submitProviderForm);
-  document.getElementById('provider-submit').addEventListener('click', submitProviderForm);
 
   // Provider 可用模型输入变化时更新默认模型下拉框
   elements.providerModelsInput.addEventListener('input', updateProviderDefaultModelSelect);
