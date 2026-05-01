@@ -2,24 +2,26 @@
   "deepseek": {
     "source": "deepseek",
     "displayName": "DeepSeek",
-    "type": "openai-compatible",
-    "baseURL": "https://api.deepseek.com",
-    "models": ["deepseek-chat", "deepseek-reasoner"],
-    "defaultModel": "deepseek-chat",
-    "description": "DeepSeek API — 兼容 OpenAI 接口协议"
+    "type": "anthropic-compatible",
+    "baseURL": "https://api.deepseek.com/anthropic",
+    "models": ["deepseek-v4-flash", "deepseek-v4-pro[1m]"],
+    "defaultModel": "deepseek-v4-flash",
+    "description": "DeepSeek API — 兼容 anthropic 接口协议"
   },
   "volcengine": {
     "source": "volcengine",
     "displayName": "Volcengine (火山引擎)",
-    "type": "openai-compatible",
-    "baseURL": "https://ark.cn-beijing.volces.com/api/v3",
+    "type": "anthropic-compatible",
+    "baseURL": "https://ark.cn-beijing.volces.com/api/coding",
     "models": [
-      "doubao-1.5-pro-256k-250115",
-      "doubao-1.5-lite-32k-250115",
-      "deepseek-v3-241226",
-      "deepseek-r1-250120"
+      "doubao-seed-2.0-code",
+      "doubao-seed-2.0-pro",
+      "doubao-seed-2.0-lite",
+      "minimax-m2.7",
+      "glm-5.1",
+      "kimi-k2.6"
     ],
-    "defaultModel": "doubao-1.5-pro-256k-250115",
+    "defaultModel": "glm-5.1",
     "description": "火山引擎方舟大模型推理 API"
   },
   "tencent": {
@@ -34,38 +36,16 @@
   "alibaba": {
     "source": "alibaba",
     "displayName": "Alibaba (阿里云)",
-    "type": "openai-compatible",
-    "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "models": ["qwen-max", "qwen-plus", "qwen-turbo", "deepseek-v3", "deepseek-r1"],
-    "defaultModel": "qwen-plus",
-    "description": "阿里云百炼大模型服务平台"
-  },
-  "openai": {
-    "source": "openai",
-    "displayName": "OpenAI",
-    "type": "openai-compatible",
-    "baseURL": "https://api.openai.com/v1",
-    "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o3-mini", "o1"],
-    "defaultModel": "gpt-4o",
-    "description": "OpenAI API"
-  },
-  "anthropic": {
-    "source": "anthropic",
-    "displayName": "Anthropic",
     "type": "anthropic-compatible",
-    "baseURL": "https://api.anthropic.com",
-    "models": [
-      "claude-sonnet-4-20250514",
-      "claude-haiku-3-5-20241022",
-      "claude-opus-4-20250514"
-    ],
-    "defaultModel": "claude-sonnet-4-20250514",
-    "description": "Anthropic Claude API"
+    "baseURL": "https://coding.dashscope.aliyuncs.com/apps/anthropic",
+    "models": ["glm-5", "MiniMax-M2.5", "kimi-k2.5", "qwen3.6-plus"],
+    "defaultModel": "glm-5",
+    "description": "阿里云百炼大模型服务平台"
   },
   "custom": {
     "source": "custom",
     "displayName": "自定义",
-    "type": "openai-compatible",
+    "type": "anthropic-compatible",
     "baseURL": "",
     "models": [],
     "defaultModel": "",
