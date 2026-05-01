@@ -4,7 +4,7 @@
 
 cce (claude-code-env) 是一个 TypeScript CLI 工具，用于管理多个 Claude API 配置文件，通过 Provider-Profile 架构切换不同 API 端点。
 
-**v1.3:** 增加 Provider Source Template 功能 — 当用户通过 `cce provider add` 添加 Provider 时，选择已知 Source（DeepSeek, OpenAI, Anthropic 等）后自动填充 baseURL、常用模型列表和 defaultModel 等默认值，减少手动输入负担。模板仅用于表单预填，不污染最终保存的数据。
+**v1.3 (Phases 7-9):** 实现完整的 Provider Source Template 功能体系 — CLI 模板预填（Phase 7）+ WebUI 模板集成（Phase 8）+ 模板配置独立化（Phase 9）。当用户选择已知 Source（DeepSeek, OpenAI, Anthropic 等）时自动填充 baseURL 和常用模型列表，减少手动输入负担。模板仅用于表单预填，不污染最终保存的数据。
 
 ## Core Value
 
@@ -35,36 +35,31 @@ Provider Source Template — 让用户添加 Provider 时无需手动记忆和�
 
 
 - ✅ WebUI Source 下拉框改为 API 动态获取 — Phase 8
-
-### Active
-
-- [ ] **TPL-01**: 定义 `SourceTemplate` 数据结构，与现有 `Provider` 接口兼容
-- [ ] **TPL-02**: 实现 6 个已知 Source 的模板（DeepSeek, Volcengine, Tencent, Alibaba, OpenAI, Anthropic）
-- [ ] **TPL-03**: Custom source 模板不留默认值
-- [ ] **TUX-01**: 模板集成到 inquirer 流程，自动预填
-- [ ] **TUX-02**: 用户可独立覆盖/修改任何字段
-- [ ] **TUX-03**: API Key 始终强制用户输入
-- [ ] **TISO-01**: 模板仅用于表单预填，不污染保存数据
-- [ ] **TISO-02**: `createProviderFromTemplate()` 实现为纯函数
+- ✅ 模板内容提取为独立 JSON 配置（双层架构：内置 + 用户覆盖） — Phase 9
+- ✅ Source Template 数据模型定义（`SourceTemplate` 接口 + 7 个模板） — Phase 7
+- ✅ CLI Provider Add 模板自动预填 — Phase 7
+- ✅ CLI Provider Edit 交互式表单替代外部编辑器 — Phase 7
+- ✅ 数据隔离：模板仅用于表单预填，不污染保存数据 — Phase 7
 
 ### Out of Scope
 
 - 修改 `ProviderType`（openai-compatible / anthropic-compatible / custom）— 不同的概念，不在本次范围
 - 修改 Profile 结构 — Profile 不包含 vendor/source 字段
 - 修改 Claude Code 或 OpenCode 生成的配置格式 — 不影响
+- WebUI 模板功能 — 在 Phase 8 中已实现（原规划仅在 CLI 实现）
 - 配置单元测试框架 — 项目当前零测试覆盖，待后续考虑
-- WebUI 模板功能 — 仅在 CLI 中实现模板预填
 
 ## Context
 
 ### v1.0 (shipped)
 Vendor → Source 重命名完成，7 个文件修改，106 行插入，85 行删除。
 
-### v1.3 (planning)
-所有 3 个 Spike 全部 VALIDATED。基于验证结果实现：
-- `SourceTemplate` 数据模型（6 个已知 source + 1 custom）
-- CLI 表单集成（`src/commands/provider.ts` 约 20 行修改）
-- 数据隔离（纯函数 `createProviderFromTemplate()`）
+### v1.3 (shipped)
+Phases 7-9 在 2026-05-01 同一天完成，合并为一个统一里程碑：
+
+- **Phase 7**: Source Template 数据模型 + CLI 表单集成 + Provider Edit 交互式增强
+- **Phase 8**: WebUI Source 模板自动预填（后端 API + 前端动态加载 + 预填高亮 + 脏字段检测）
+- **Phase 9**: 模板内容提取为独立 JSON 配置（内置 JSON + 用户覆盖 JSON 双层架构）
 
 Tech stack: TypeScript, Commander, Express, CommonJS.
 
@@ -105,4 +100,6 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-01 — v1.3 milestone created*
+*Last updated: 2026-05-01 — v1.3 milestone (Phases 7-9) completed, full PROJECT.md review*
+*Next milestone: TBD*
+*Note: Issue #159 rebranding (badge-vendor CSS class) and test framework setup remain deferred.*
