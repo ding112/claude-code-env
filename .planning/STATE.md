@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
+milestone: v1.3
 milestone_name: Template Config Extract
-status: planned
-last_updated: "2026-05-01T09:11:20.201Z"
-last_activity: 2026-05-01 — Phase 9 planned (1 plan)
+status: completed
+last_updated: "2026-05-01T09:44:29.065Z"
+last_activity: 2026-05-01 -- Phase 08 marked complete
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 0
-  percent: 0
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 3
+  percent: 60
 ---
 
 # Project State
@@ -20,16 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Provider Source Template — 当用户通过 `cce provider add` 添加 Provider 时，选择已知 Source 后自动填充 baseURL 和常用模型列表，减少手动输入负担
-**Current focus:** Phase 9 — 模板内容提取为独立配置 (已规划)
+**Current focus:** Phase 08 — source-template-webui
 
 ## Current Position
 
-Milestone: v1.5 — Template Config Extract
-Status: 🔄 PLANNED (Phase 9, 1/1 plan)
-Phases: 1 (Phase 9)
-Last activity: 2026-05-01 — Phase 9 planned (1 plan)
+Phase: 08 — COMPLETE
+Plan: 1 of 1
+Milestone: v1.3 / v1.4
+Status: Phase 08 complete
+Phases: 3 (Phase 7-01 completed + Phase 7-02 planned + Phase 8 planned + Phase 9 planned)
+Last activity: 2026-05-01 -- Phase 08 marked complete
 
-Progress: [          ] 0% (planned, not yet executed)
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -39,6 +41,7 @@ Progress: [          ] 0% (planned, not yet executed)
 - Total execution time: 1 day
 - Files modified (v1.0): 7 (106 insertions, 85 deletions)
 - Files added (v1.3): 1 new file (sourceTemplates.ts) + 1 modified (provider.ts)
+- Phase 7-02 (in progress): 1 file modified (provider.ts) — interactive edit form
 
 **By Phase:**
 
@@ -50,8 +53,8 @@ Progress: [          ] 0% (planned, not yet executed)
 | 4. WebUI 后端 API 修改 | v1.0 | 1 | Complete |
 | 5. WebUI 前端修改 | v1.0 | 1 | Complete |
 | 6. 全局验证 | v1.0 | 1 | Complete |
-| 7. Source Template 实现 | v1.3 | 1 | Complete |
-| 8. Source Template WebUI 集成 | v1.4 | 0 | Discussing |
+| 7. Source Template 实现 | v1.3 | 2 | In Progress |
+| 8. Source Template WebUI 集成 | v1.4 | 1 | Planned |
 | 9. 模板内容提取为独立配置 | v1.5 | 1 | Planned |
 
 ## Accumulated Context
@@ -71,6 +74,16 @@ Progress: [          ] 0% (planned, not yet executed)
 - 每个字段均可独立覆盖/修改
 - 无需引入新依赖
 - API Key 始终强制用户输入（模板不预设）
+
+**v1.3 Phase 7-02 Decisions (Provider Edit 交互式增强):**
+
+- 编辑流程：`providerEditCommand()` 改用 inquirer 表单（和 `provider add` 风格一致）
+- API Key：掩码显示 + 询问「是否修改？」；不修改则自动保留旧值
+- 编辑模式不应用 Source Template
+- `name` 字段不可编辑
+- 编辑完成后仅显示有变化的字段摘要
+- `validateProvider()` 不做修改，编辑流程内部处理 apiKey 逻辑
+- 移除外部编辑器关联代码（open, 临时文件读写）
 
 **v1.4 Decisions (Source Template WebUI):**
 
@@ -109,4 +122,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-01T09:11:20.197Z
-Current state: Phase 9 planned, ready for execution.
+Current state: Phase 7-02 in progress — provider edit enhancement planned and implemented.
+Next: Verify and test `cce provider edit` interactive flow.

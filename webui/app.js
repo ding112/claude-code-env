@@ -717,7 +717,7 @@ async function submitProviderForm(event) {
   if (!type) missing.push('类型');
   if (!source) missing.push('来源');
   if (!baseURL) missing.push('Base URL');
-  if (!apiKey) missing.push('API Key');
+  if (!editingProviderName && !apiKey) missing.push('API Key');
   if (!modelsStr) missing.push('可用模型');
   if (!defaultModel) missing.push('默认模型');
   if (missing.length > 0) {
@@ -739,10 +739,13 @@ async function submitProviderForm(event) {
     type,
     source,
     baseURL,
-    apiKey,
     models,
     defaultModel,
   };
+  // 编辑模式且 API Key 为空时，不发送 API Key（后端保留原值）
+  if (!editingProviderName || apiKey) {
+    body.apiKey = apiKey;
+  }
 
   try {
     if (editingProviderName) {

@@ -4,8 +4,8 @@
 
 - ✅ **v1.0 Vendor → Source 重命名** — Phases 1-6 (shipped 2026-05-01)
 - ✅ **v1.3 Provider Source Template** — Phase 7 (planned 2026-05-01)
-- 🔄 **v1.4 Source Template WebUI** — Phase 8 (discussing)
-- 🔄 **v1.5 Template Config Extract** — Phase 9 (planned)
+- ✅ **v1.4 Source Template WebUI** — Phase 8 (planned)
+- ✅ **v1.5 Template Config Extract** — Phase 9 (planned)
 
 ## Phases
 
@@ -21,30 +21,34 @@
 
 </details>
 
-<details>
+<details open>
 <summary>✅ v1.3 Provider Source Template (Phase 7) — PLANNED</summary>
 
-- [x] Phase 7: Source Template 实现 (1/1 plan) — planned 2026-05-01
+- [x] Phase 7-01: Source Template 实现 — completed 2026-05-01
+- [ ] Phase 7-02: Provider Edit 交互式增强 — planned 2026-05-01
+
+Plans:
+- [x] 07-01-PLAN.md — 模板数据模型 + CLI 表单集成 + 数据隔离
+- [ ] 07-02-PLAN.md — Provider Edit 交互式表单替代外部编辑器编辑
+</details>
+
+<details open>
+<summary>✅ v1.4 Source Template WebUI (Phase 8) — PLANNED</summary>
+
+- [x] Phase 8: Source Template WebUI 集成 (1/1 plan) — planned 2026-05-01
+
+Plans:
+- [x] 08-01-PLAN.md — 后端 API + 前端 Source 动态加载 + 模板预填逻辑
 
 </details>
 
 <details open>
-<summary>🔄 v1.4 Source Template WebUI (Phase 8) — DISCUSSING</summary>
+<summary>✅ v1.5 Template Config Extract (Phase 9) — PLANNED</summary>
 
-- [ ] Phase 8: Source Template WebUI 集成 (1/1 plan) — discussing
-
-Plans:
-- [ ] 08-01-PLAN.md — 后端 API + 前端 Source 动态加载 + 模板预填逻辑
-
-</details>
-
-<details open>
-<summary>🔄 v1.5 Template Config Extract (Phase 9) — PLANNED</summary>
-
-- [ ] Phase 9: 模板内容提取为独立配置 (1/1 plan) — planned
+- [x] Phase 9: 模板内容提取为独立配置 (1/1 plan) — planned 2026-05-01
 
 Plans:
-- [ ] 09-01-PLAN.md — 提取 SOURCE_TEMPLATES 到 sources.json + 双层架构加载
+- [x] 09-01-PLAN.md — 提取 SOURCE_TEMPLATES 到 sources.json + 双层架构加载
 
 </details>
 
@@ -58,6 +62,6 @@ Plans:
 | 4. WebUI 后端 API 修改 | v1.0 | 1/1 | Complete | 2026-05-01 |
 | 5. WebUI 前端修改 | v1.0 | 1/1 | Complete | 2026-05-01 |
 | 6. 全局验证 | v1.0 | 1/1 | Complete | 2026-05-01 |
-| 7. Source Template 实现 | v1.3 | 1/1 | Planned | 2026-05-01 |
-| 8. Source Template WebUI 集成 | v1.4 | 1/1 | Discussing | — |
+| 7. Source Template 实现 | v1.3 | 2/2 | In Progress | 2026-05-01 |
+| 8. Source Template WebUI 集成 | v1.4 | 1/1 | Planned | — |
 | 9. 模板内容提取为独立配置 | v1.5 | 1/1 | Planned | — |
