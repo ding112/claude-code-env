@@ -23,7 +23,7 @@ export interface SourceTemplate {
 // 内置模板（编译期加载）
 // ============================================================================
 
-const BUILTIN_SOURCES = builtinSources as Record<SourceType, SourceTemplate>;
+const BUILTIN_SOURCES = builtinSources as unknown as Record<string, SourceTemplate>;
 
 // ============================================================================
 // 用户配置加载
@@ -44,7 +44,7 @@ function isValidSourceTemplate(obj: unknown): obj is SourceTemplate {
   );
 }
 
-function loadSources(): Record<SourceType, SourceTemplate> {
+function loadSources(): Record<string, SourceTemplate> {
   try {
     const raw = fs.readFileSync(SOURCES_USER_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -58,7 +58,7 @@ function loadSources(): Record<SourceType, SourceTemplate> {
           isValidSourceTemplate(val)
       )
     ) {
-      return parsed as Record<SourceType, SourceTemplate>;
+      return parsed as Record<string, SourceTemplate>;
     }
 
     logger.warn(
@@ -82,7 +82,7 @@ const SOURCE_TEMPLATES = loadSources();
 // Helper 函数
 // ============================================================================
 
-export function getTemplate(source: SourceType): SourceTemplate {
+export function getTemplate(source: SourceType): SourceTemplate | undefined {
   return SOURCE_TEMPLATES[source];
 }
 

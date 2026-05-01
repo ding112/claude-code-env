@@ -73,7 +73,7 @@ export async function providerAddCommand(): Promise<void> {
 
     const template = getTemplate(source as SourceType);
 
-    if (template.description) {
+    if (template?.description) {
       console.log(`  ${template.description}`);
     }
 
@@ -86,7 +86,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'list',
         name: 'type',
         message: '选择 Provider 类型:',
-        default: template.type,
+        default: template?.type,
         choices: TYPE_OPTIONS,
       },
       {
@@ -106,13 +106,13 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'displayName',
         message: '显示名称 (可选):',
-        default: template.displayName,
+        default: template?.displayName,
       },
       {
         type: 'input',
         name: 'baseURL',
         message: 'Base URL:',
-        default: template.baseURL || undefined,
+        default: template?.baseURL || undefined,
         validate: (input: string) => {
           if (!input.trim()) return 'Base URL 不能为空';
           try {
@@ -137,7 +137,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'models',
         message: '可用模型 (用逗号分隔):',
-        default: template.models.length > 0 ? template.models.join(', ') : undefined,
+        default: (template?.models ?? []).join(', ') || undefined,
         validate: (input: string) => {
           const models = input.split(',').map(m => m.trim()).filter(m => m);
           if (models.length === 0) return '至少需要提供一个模型';
@@ -148,7 +148,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'defaultModel',
         message: '默认模型:',
-        default: template.defaultModel || undefined,
+        default: template?.defaultModel || undefined,
         validate: (input: string) => {
           if (!input.trim()) return '默认模型不能为空';
           return true;
