@@ -4,7 +4,7 @@ import { logger } from '../utils/logger.js';
 import { listProfiles, getProfile, saveProfile, deleteProfile, getActiveProfile } from './profile.js';
 import { listProviders, getProvider, saveProvider, deleteProvider, isProviderInUse, getProviderUsage } from './provider.js';
 import { switchProfile } from './switch.js';
-import { getTemplate } from './sourceTemplates.js';
+import { getTemplate, getAllTemplates } from './sourceTemplates.js';
 import type { Profile, Provider, ProviderType, SourceType, ProfileClaudeCodeSettings } from '../types/index.js';
 import { validSources } from '../types/index.js';
 
@@ -594,6 +594,25 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       logger.error('删除 provider 失败', error);
       const message = error instanceof Error ? error.message : '删除失败';
       res.status(500).json({ error: message });
+    }
+  });
+
+  // 获取所有 Source 模板
+  app.get('/api/source-templates', async (req, res) => {
+    try {
+      const templates = getAllTemplates().map(([source, tmpl]) => ({
+        source: tmpl.source,
+        displayName: tmpl.displayName,
+        type: tmpl.type,
+        baseURL: tmpl.baseURL,
+        models: tmpl.models,
+        defaultModel: tmpl.defaultModel,
+        description: tmpl.description,
+      }));
+      res.json({ templates });
+    } catch (error) {
+      logger.error('获取 Source 模板失败', error);
+      res.status(500).json({ error: '获取 Source 模板失败' });
     }
   });
 
