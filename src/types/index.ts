@@ -150,6 +150,7 @@ export interface CliConfig {
   profilesDir: string;
   providersDir: string;
   activeFile: string;
+  sourcesFile: string;
 }
 
 // ============================================================================
