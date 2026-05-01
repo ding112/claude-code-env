@@ -1,8 +1,8 @@
 // API 基础路径
 const API_BASE = '/api';
 
-// 所有可用的 Vendor 选项（不与类型联动）
-const ALL_VENDORS = [
+// 所有可用的 Source 选项（不与类型联动）
+const ALL_SOURCES = [
   { name: 'DeepSeek', value: 'deepseek' },
   { name: '火山引擎', value: 'volcengine' },
   { name: '腾讯', value: 'tencent' },
@@ -12,8 +12,8 @@ const ALL_VENDORS = [
   { name: '自定义', value: 'custom' },
 ];
 
-// Vendor 显示名称映射
-const VENDOR_DISPLAY_NAMES = {
+// Source 显示名称映射
+const SOURCE_DISPLAY_NAMES = {
   'deepseek': 'DeepSeek',
   'volcengine': '火山引擎',
   'tencent': '腾讯',
@@ -59,7 +59,7 @@ const elements = {
   providerForm: document.getElementById('provider-form'),
   providerModelsInput: document.getElementById('provider-models'),
   providerDefaultModel: document.getElementById('provider-default-model'),
-  providerVendorSelect: document.getElementById('provider-vendor'),
+  providerSourceSelect: document.getElementById('provider-source'),
   providerTypeSelect: document.getElementById('provider-type'),
 };
 
@@ -99,20 +99,20 @@ function getProviderTypeBadge(type) {
   return badges[type] || `<span class="badge">${escapeHtml(type)}</span>`;
 }
 
-// 更新 Provider Vendor 下拉框选项（不依赖类型选择）
-function updateProviderVendorOptions(selectedVendor = null) {
-  const vendorSelect = elements.providerVendorSelect;
+// 更新 Provider Source 下拉框选项（不依赖类型选择）
+function updateProviderSourceOptions(selectedSource = null) {
+  const sourceSelect = elements.providerSourceSelect;
 
-  vendorSelect.innerHTML = '<option value="">请选择供应商</option>';
+  sourceSelect.innerHTML = '<option value="">请选择来源</option>';
 
-  ALL_VENDORS.forEach(opt => {
+  ALL_SOURCES.forEach(opt => {
     const option = document.createElement('option');
     option.value = opt.value;
     option.textContent = opt.name;
-    if (opt.value === selectedVendor) {
+    if (opt.value === selectedSource) {
       option.selected = true;
     }
-    vendorSelect.appendChild(option);
+    sourceSelect.appendChild(option);
   });
 }
 
@@ -243,7 +243,7 @@ function renderProviders() {
   }
 
   elements.providersTbody.innerHTML = providers.map(provider => {
-    const vendorDisplay = VENDOR_DISPLAY_NAMES[provider.vendor] || provider.vendor || '-';
+    const sourceDisplay = SOURCE_DISPLAY_NAMES[provider.source] || provider.source || '-';
     return `
       <tr>
         <td>
@@ -251,7 +251,7 @@ function renderProviders() {
           <div class="profile-model">${escapeHtml(provider.displayName)}</div>
         </td>
         <td>${getProviderTypeBadge(provider.type)}</td>
-        <td><span class="badge badge-vendor">${escapeHtml(vendorDisplay)}</span></td>
+        <td><span class="badge badge-vendor">${escapeHtml(sourceDisplay)}</span></td>
         <td><code class="url-code">${escapeHtml(provider.baseURL)}</code></td>
         <td>${provider.models?.length || 0}</td>
         <td class="actions">
@@ -509,7 +509,7 @@ function showProviderDetails(name) {
 
   elements.providerDetailsTitle.textContent = `${provider.displayName} 详情`;
 
-  const vendorDisplay = VENDOR_DISPLAY_NAMES[provider.vendor] || provider.vendor || '-';
+  const sourceDisplay = SOURCE_DISPLAY_NAMES[provider.source] || provider.source || '-';
 
   let html = `
     <div class="detail-group">
@@ -525,8 +525,8 @@ function showProviderDetails(name) {
       <div>${getProviderTypeBadge(provider.type)}</div>
     </div>
     <div class="detail-group">
-      <label>Vendor</label>
-      <div>${escapeHtml(vendorDisplay)}</div>
+      <label>来源</label>
+      <div>${escapeHtml(sourceDisplay)}</div>
     </div>
     <div class="detail-group">
       <label>Base URL</label>
@@ -582,8 +582,8 @@ function openProviderModal(name = null) {
       document.getElementById('provider-api-key').value = provider.apiKey || '';
       document.getElementById('provider-models').value = (provider.models || []).join(', ');
       updateProviderDefaultModelSelect(provider.defaultModel);
-      // 更新 vendor 下拉框并设置选中值
-      updateProviderVendorOptions(provider.vendor);
+      // 更新 source 下拉框并设置选中值
+      updateProviderSourceOptions(provider.source);
       // 编辑模式下名称不可修改
       document.getElementById('provider-name').disabled = true;
     }
@@ -591,8 +591,8 @@ function openProviderModal(name = null) {
     // 创建模式
     elements.providerModalTitle.textContent = '新建 Provider';
     document.getElementById('provider-name').disabled = false;
-    // 重置 vendor 下拉框
-    updateProviderVendorOptions();
+    // 重置 source 下拉框
+    updateProviderSourceOptions();
   }
 
   elements.providerModal.classList.remove('hidden');
@@ -622,7 +622,7 @@ async function submitProviderForm(event) {
   const name = editingProviderName || formData.get('name')?.toString().trim();
   const displayName = formData.get('displayName')?.toString().trim();
   const type = formData.get('type')?.toString().trim();
-  const vendor = formData.get('vendor')?.toString().trim();
+  const source = formData.get('source')?.toString().trim();
   const baseURL = formData.get('baseURL')?.toString().trim();
   const apiKey = formData.get('apiKey')?.toString().trim();
   const modelsStr = formData.get('models')?.toString().trim();
@@ -632,7 +632,7 @@ async function submitProviderForm(event) {
   const missing = [];
   if (!editingProviderName && !name) missing.push('配置名称');
   if (!type) missing.push('类型');
-  if (!vendor) missing.push('供应商');
+  if (!source) missing.push('来源');
   if (!baseURL) missing.push('Base URL');
   if (!apiKey) missing.push('API Key');
   if (!modelsStr) missing.push('可用模型');
@@ -654,7 +654,7 @@ async function submitProviderForm(event) {
     name,
     displayName,
     type,
-    vendor,
+    source,
     baseURL,
     apiKey,
     models,
@@ -920,7 +920,7 @@ function init() {
   // Provider 可用模型输入变化时更新默认模型下拉框
   elements.providerModelsInput.addEventListener('input', updateProviderDefaultModelSelect);
 
-  // Provider 类型变化不再联动 vendor 下拉框
+  // Provider 类型变化不再联动 source 下拉框
 }
 
 // 启动

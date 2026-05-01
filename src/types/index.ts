@@ -5,8 +5,8 @@
 // Provider 类型
 export type ProviderType = 'openai-compatible' | 'anthropic-compatible' | 'custom';
 
-// Vendor 类型（供应商标识）
-export type VendorType =
+// Source 类型（配置来源标识）
+export type SourceType =
   | 'deepseek'
   | 'volcengine'
   | 'tencent'
@@ -15,12 +15,22 @@ export type VendorType =
   | 'anthropic'
   | 'custom';
 
+export const validSources: SourceType[] = [
+  'deepseek',
+  'volcengine',
+  'tencent',
+  'alibaba',
+  'openai',
+  'anthropic',
+  'custom',
+];
+
 // Provider 配置（全局共享）
 export interface Provider {
   name: string;                    // 唯一标识
   displayName: string;            // 显示名称
   type: ProviderType;              // Provider 类型
-  vendor?: VendorType;             // 供应商标识（可选）
+  source?: SourceType;             // 配置来源标识（可选）
 
   // 连接配置
   baseURL: string;
@@ -80,7 +90,7 @@ export interface EffectiveConfig {
   isModelOverridden: boolean;
 
   // 扩展信息
-  vendor?: VendorType;
+  source?: SourceType;
   claudeCodeSettings?: ProfileClaudeCodeSettings;
 }
 

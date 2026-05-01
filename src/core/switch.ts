@@ -108,7 +108,7 @@ export function resolveConfig(profile: Profile, provider: Provider): EffectiveCo
     providerName: provider.name,
     providerDisplayName: provider.displayName,
     isModelOverridden: !!profile.model,
-    vendor: provider.vendor,
+    source: provider.source,
     claudeCodeSettings,
   };
 }
