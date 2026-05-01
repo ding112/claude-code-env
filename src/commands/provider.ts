@@ -2,7 +2,9 @@ import inquirer from 'inquirer';
 import open from 'open';
 import { logger } from '../utils/logger.js';
 import { validateName } from '../utils/validation.js';
-import type { Provider, VendorType } from '../types/index.js';
+import type { Provider, SourceType } from '../types/index.js';
+import { validSources } from '../types/index.js';
+import { getTemplate } from '../core/sourceTemplates.js';
 import {
   listProviders,
   getProvider,
@@ -36,8 +38,8 @@ const TYPE_OPTIONS = [
   { name: '自定义', value: 'custom' },
 ] as const;
 
-// Vendor 选项映射
-const VENDOR_OPTIONS = [
+// Source 选项映射
+const SOURCE_OPTIONS = [
   { name: 'DeepSeek', value: 'deepseek' },
   { name: 'Volcengine', value: 'volcengine' },
   { name: 'Tencent', value: 'tencent' },
@@ -47,17 +49,8 @@ const VENDOR_OPTIONS = [
   { name: 'Custom', value: 'custom' },
 ] as const;
 
-export function sanitizeVendorInput(input: string): VendorType {
-  const validVendors: VendorType[] = [
-    'deepseek',
-    'volcengine',
-    'tencent',
-    'alibaba',
-    'openai',
-    'anthropic',
-    'custom',
-  ];
-  return validVendors.includes(input as VendorType) ? (input as VendorType) : 'custom';
+export function sanitizeSourceInput(input: string): SourceType {
+  return validSources.includes(input as SourceType) ? (input as SourceType) : 'custom';
 }
 
 function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthropic-compatible' | 'custom' {
@@ -73,18 +66,36 @@ function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthrop
 
 export async function providerAddCommand(): Promise<void> {
   try {
+    // ========================================================================
+    // Phase 1: 选择 Source，加载模板
+    // ========================================================================
+
+    const { source } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'source',
+        message: '选择来源 (Source) — 模板将自动填充默认值:',
+        choices: SOURCE_OPTIONS,
+      },
+    ]);
+
+    const template = getTemplate(source as SourceType);
+
+    if (template.description) {
+      console.log(`  ${template.description}`);
+    }
+
+    // ========================================================================
+    // Phase 2: 填写 Provider 配置（模板值作为默认值）
+    // ========================================================================
+
     const answers = await inquirer.prompt([
       {
         type: 'list',
         name: 'type',
         message: '选择 Provider 类型:',
+        default: template.type,
         choices: TYPE_OPTIONS,
-      },
-      {
-        type: 'list',
-        name: 'vendor',
-        message: '选择 Vendor (供应商):',
-        choices: VENDOR_OPTIONS,
       },
       {
         type: 'input',
@@ -93,7 +104,6 @@ export async function providerAddCommand(): Promise<void> {
         validate: (input: string) => {
           const trimmed = input.trim();
           if (!trimmed) return '配置名称不能为空';
-          // 检查路径遍历字符
           if (trimmed.includes('..') || trimmed.includes('/') || trimmed.includes('\\')) {
             return '配置名称包含非法字符';
           }
@@ -103,12 +113,14 @@ export async function providerAddCommand(): Promise<void> {
       {
         type: 'input',
         name: 'displayName',
-        message: '显示名称 (可选，留空则使用配置名称):',
+        message: '显示名称 (可选):',
+        default: template.displayName,
       },
       {
         type: 'input',
         name: 'baseURL',
         message: 'Base URL:',
+        default: template.baseURL || undefined,
         validate: (input: string) => {
           if (!input.trim()) return 'Base URL 不能为空';
           try {
@@ -133,6 +145,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'models',
         message: '可用模型 (用逗号分隔):',
+        default: template.models.length > 0 ? template.models.join(', ') : undefined,
         validate: (input: string) => {
           const models = input.split(',').map(m => m.trim()).filter(m => m);
           if (models.length === 0) return '至少需要提供一个模型';
@@ -143,6 +156,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'defaultModel',
         message: '默认模型:',
+        default: template.defaultModel || undefined,
         validate: (input: string) => {
           if (!input.trim()) return '默认模型不能为空';
           return true;
@@ -153,7 +167,7 @@ export async function providerAddCommand(): Promise<void> {
     const models = answers.models.split(',').map((m: string) => m.trim()).filter((m: string) => m);
 
     if (!models.includes(answers.defaultModel)) {
-      console.log(`⚠ 默认模型 "${answers.defaultModel}" 不在可用模型列表中，已自动添加`);
+      console.log(`  ⚠ 默认模型 "${answers.defaultModel}" 不在可用模型列表中，已自动添加`);
       models.push(answers.defaultModel);
     }
 
@@ -161,7 +175,7 @@ export async function providerAddCommand(): Promise<void> {
       name: answers.name.trim(),
       displayName: answers.displayName?.trim() || answers.name.trim(),
       type: getProviderTypeFromValue(answers.type),
-      vendor: sanitizeVendorInput(answers.vendor),
+      source: sanitizeSourceInput(source),
       baseURL: answers.baseURL,
       apiKey: answers.apiKey,
       models,
@@ -172,10 +186,10 @@ export async function providerAddCommand(): Promise<void> {
 
     await saveProvider(provider);
 
-    console.log(`✓ Provider '${provider.name}' 已创建`);
+    console.log(`✔ Provider '${provider.name}' 已创建`);
     console.log(`  显示名称: ${provider.displayName}`);
     console.log(`  类型: ${provider.type}`);
-    console.log(`  Vendor: ${provider.vendor}`);
+    console.log(`  Source: ${provider.source}`);
     console.log(`  Base URL: ${provider.baseURL}`);
     console.log(`  模型数: ${provider.models.length}`);
     console.log(`  默认模型: ${provider.defaultModel}`);
@@ -206,8 +220,8 @@ export async function providerListCommand(): Promise<void> {
       console.log(`  ${provider.name}`);
       console.log(`    显示名称: ${provider.displayName}`);
       console.log(`    类型: ${provider.type}`);
-      if (provider.vendor) {
-        console.log(`    Vendor: ${provider.vendor}`);
+      if (provider.source) {
+        console.log(`    Source: ${provider.source}`);
       }
       console.log(`    Base URL: ${provider.baseURL}`);
       console.log(`    模型 (${provider.models.length}):`);
@@ -249,8 +263,8 @@ export async function providerShowCommand(name: string): Promise<void> {
     console.log(`Provider: ${provider.name}`);
     console.log(`  显示名称: ${provider.displayName}`);
     console.log(`  类型: ${provider.type}`);
-    if (provider.vendor) {
-      console.log(`  Vendor: ${provider.vendor}`);
+    if (provider.source) {
+      console.log(`  Source: ${provider.source}`);
     }
     console.log(`  Base URL: ${provider.baseURL}`);
     console.log(`  API Key: ${maskApiKey(provider.apiKey)}`);
