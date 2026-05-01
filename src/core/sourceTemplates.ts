@@ -75,17 +75,14 @@ function loadSources(): Record<string, SourceTemplate> {
   return { ...BUILTIN_SOURCES };
 }
 
-// 模块级缓存（模块加载时执行一次）
-const SOURCE_TEMPLATES = loadSources();
-
 // ============================================================================
-// Helper 函数
+// Helper 函数（每次调用重新加载，确保 WebUI 长运行期间用户配置变更即时生效）
 // ============================================================================
 
 export function getTemplate(source: SourceType): SourceTemplate | undefined {
-  return SOURCE_TEMPLATES[source];
+  return loadSources()[source];
 }
 
 export function getAllTemplates(): [SourceType, SourceTemplate][] {
-  return Object.entries(SOURCE_TEMPLATES) as [SourceType, SourceTemplate][];
+  return Object.entries(loadSources()) as [SourceType, SourceTemplate][];
 }
