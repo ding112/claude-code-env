@@ -64,6 +64,20 @@ src/
 - **缩进**: 2 空格
 - **错误处理**: 所有命令动作使用 try-catch 包裹，使用 `logger.error()` 和 `process.exit(1)`
 
+## CLI 与 WebUI 一致性
+
+CLI 命令和 WebUI 对同一功能的操作必须行为一致，共享相同的核心逻辑（`src/core/`），差异仅限于交互方式：
+- **CLI**: 使用 inquirer 交互式提示
+- **WebUI**: 使用浏览器表单
+
+具体规则：
+- 表单字段必须同时存在于 CLI 和 WebUI（不可遗漏）
+- 字段默认值、验证规则、错误提示必须一致
+- 共享 `src/core/` 中的 CRUD 和验证函数，不重复实现业务逻辑
+- WebUI 后端路由（`src/core/webuiServer.ts`）使用与 CLI 命令相同的核心函数
+- 前端提交时如果字段未改动则不应发送到后端，后端保留原值
+- 新增功能时必须同时提供 CLI 和 WebUI 版本
+
 ## 添加新命令
 
 1. 在 `src/commands/<command>.ts` 创建文件

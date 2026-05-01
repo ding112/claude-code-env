@@ -1,112 +1,120 @@
-[中文文档](README_CN.md)
+[English](README_EN.md)
 
 # claude-code-env (cce)
 
-A CLI tool for managing multiple Claude API configurations via a Provider-Profile architecture, configuring both [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenCode](https://github.com/opencode-ai/opencode) simultaneously.
+一个 CLI 工具，通过 Provider-Profile 架构管理多个 Claude API 配置，配置 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)。
 
-## Features
+## 功能特性
 
-- Provider-Profile architecture: separate API endpoint definitions from user configurations
-- Switch profiles to update Claude Code and OpenCode configs at once
-- Secure API key management with strict file permissions (0o600/0o700)
-- Interactive CLI with [Inquirer.js](https://github.com/SBoudrias/Inquirer.js)
-- WebUI management dashboard
-- Built-in configuration diagnostics (`cce doctor`)
+- Provider-Profile 架构：将 API 端点定义与用户配置分离
+- **Source 模板系统**：内置 DeepSeek、Volcengine、Tencent、Alibaba、OpenAI、Anthropic 模板，自动填充默认值
+- 切换 Profile 时更新 Claude Code 配置
+- 安全的 API Key 管理，严格的文件权限 (0o600/0o700)
+- 基于 [Inquirer.js](https://github.com/SBoudrias/Inquirer.js) 的交互式命令行
+- WebUI 管理界面，支持动态 Source 模板选择
+- 内置配置诊断工具 (`cce doctor`)
+- Profile 级 Claude Code 高级设置（模型覆盖、effort level）
 
-## Installation
+## 安装
 
 ```bash
 npm install -g @mengzai1/cce
 ```
 
-Requires Node.js >= 16.0.0.
+需要 Node.js >= 16.0.0。
 
-## Quick Start
+## 快速开始
 
 ```bash
-# 1. Initialize config directory (~/.config/cce)
+# 1. 初始化配置目录 (~/.config/cce)
 cce init
 
-# 2. Add a provider (e.g. Volcano Engine)
-cce provider add volcano
+# 2. 添加 Provider（选择 Source 后将自动填充默认值）
+cce provider add
 
-# 3. Create a profile referencing the provider
+# 3. 创建 Profile，引用 Provider
 cce create work
 
-# 4. Activate the profile
+# 4. 激活 Profile
 cce use work
 ```
 
-## Commands
+## 命令参考
 
-### Profile Management
+### Profile 管理
 
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `cce init` | | Initialize the configuration directory |
-| `cce create <name>` | | Create a new profile (interactively select a provider) |
-| `cce use [name]` | | Activate a profile (interactive selection if name is omitted) |
-| `cce list` | `ls` | List all profiles |
-| `cce current` | `c` | Show the currently active profile |
-| `cce show <name>` | | Show profile details |
-| `cce edit <name>` | | Edit a profile |
-| `cce remove <name>` | `rm` | Remove a profile |
+| 命令 | 别名 | 说明 |
+|------|------|------|
+| `cce init` | | 初始化配置目录 |
+| `cce create <name>` | | 创建新 Profile（交互式选择 Provider） |
+| `cce use [name]` | | 激活 Profile（不指定则交互式选择） |
+| `cce list` | `ls` | 列出所有 Profile |
+| `cce current` | `c` | 显示当前激活的 Profile |
+| `cce show <name>` | | 显示 Profile 详情 |
+| `cce edit <name>` | | 编辑 Profile |
+| `cce remove <name>` | `rm` | 删除 Profile |
 
-### Provider Management
+### Provider 管理
 
-| Command | Description |
-|---------|-------------|
-| `cce provider add <type>` | Add a new provider |
-| `cce provider list` | List all providers |
-| `cce provider show <name>` | Show provider details |
-| `cce provider edit <name>` | Edit a provider |
-| `cce provider remove <name>` | Remove a provider |
+| 命令 | 说明 |
+|------|------|
+| `cce provider add` | 添加新 Provider（先选择 Source 模板，自动填充默认值） |
+| `cce provider list` | 列出所有 Provider |
+| `cce provider show <name>` | 显示 Provider 详情 |
+| `cce provider edit <name>` | 编辑 Provider |
+| `cce provider remove <name>` | 删除 Provider |
 
-Supported provider types: `openai-compatible`, `anthropic-compatible`, `custom`
+支持的 Provider 类型：`openai-compatible`、`anthropic-compatible`、`custom`
 
-### Other Commands
+支持的 Source（模板）：`deepseek`、`volcengine`、`tencent`、`alibaba`、`openai`、`anthropic`、`custom`
 
-| Command | Description |
-|---------|-------------|
-| `cce doctor` | Check configuration for issues |
-| `cce ui` | Launch the WebUI dashboard |
+### 其他命令
 
-`cce ui` options:
-- `-p, --port <port>` — specify a port
-- `--no-open` — don't auto-open the browser
+| 命令 | 说明 |
+|------|------|
+| `cce doctor` | 检查配置是否正确 |
+| `cce ui` | 启动 WebUI 管理界面 |
 
-## How It Works
+`cce ui` 选项：
+- `-p, --port <port>` — 指定端口
+- `--no-open` — 不自动打开浏览器
+
+## 工作原理
 
 ```
-Profile (references) -> Provider (resolves) -> EffectiveConfig (generates) -> Config Files
+Source 模板 (内置 JSON) -> Provider (解析) -> Profile (引用) -> EffectiveConfig (生成) -> 配置文件
 ```
 
-When you run `cce use <profile>`:
+执行 `cce provider add` 时，首先选择一个 **Source**——内置模板会自动填充 baseURL、可用模型和默认模型，然后可根据需要自定义。
 
-1. Loads the profile and resolves the referenced provider
-2. Merges into an `EffectiveConfig` (baseURL, apiKey, model)
-3. Writes Claude Code config (`~/.claude/settings.json`) and OpenCode config (`~/.config/opencode/opencode.json`)
+执行 `cce use <profile>` 时：
 
-## Configuration
+1. 加载 Profile 并解析引用的 Provider
+2. 合并为 `EffectiveConfig`（baseURL、apiKey、model）
+3. 写入 Claude Code 配置 (`~/.claude/settings.json`)
 
-### Directory Layout
+## 配置说明
+
+### 目录结构
 
 ```
 ~/.config/cce/
-├── providers/          # Provider definitions
+├── providers/          # Provider 定义
 │   └── volcano-prod.json
-├── profiles/           # User profiles
+├── profiles/           # 用户 Profile
 │   └── work.json
-└── active              # Currently active profile name
+├── sources.json        # （可选）用户 Source 模板覆盖
+└── active              # 当前激活的 Profile 名称
 ```
 
-### Provider Example
+### Provider 示例
 
 ```json
 {
   "name": "volcano-prod",
-  "displayName": "Volcano Engine Production",
+  "displayName": "火山引擎生产环境",
   "type": "openai-compatible",
+  "source": "volcengine",
   "baseURL": "https://ark.cn-beijing.volces.com/api/v3",
   "apiKey": "your-api-key",
   "models": ["ep-20250101-xxxx", "ep-20250201-yyyy"],
@@ -114,29 +122,66 @@ When you run `cce use <profile>`:
 }
 ```
 
-### Profile Example
+### Source 模板示例
+
+内置 Source 模板定义在 `src/core/sources.json`。可通过创建 `~/.config/cce/sources.json` 覆盖：
+
+```json
+{
+  "deepseek": {
+    "source": "deepseek",
+    "displayName": "DeepSeek",
+    "type": "anthropic-compatible",
+    "baseURL": "https://api.deepseek.com/anthropic",
+    "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
+    "defaultModel": "deepseek-v4-flash",
+    "description": "DeepSeek API — 兼容 anthropic 接口协议"
+  }
+}
+```
+
+### Profile 示例
 
 ```json
 {
   "name": "work",
-  "description": "Work environment",
+  "description": "工作环境",
   "provider": "volcano-prod",
   "model": "ep-20250101-xxxx",
+  "claudeCodeSettings": {
+    "defaultSonnetModel": "claude-sonnet-4-20250514",
+    "defaultHaikuModel": "claude-haiku-4-20250514",
+    "effortLevel": "high"
+  },
   "createdAt": "2024-01-01T00:00:00.000Z",
   "updatedAt": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-## FAQ
+Profile 级的 `claudeCodeSettings`（可选）允许按 Profile 覆盖 Claude Code 模型设置：
+- `defaultOpusModel`、`defaultSonnetModel`、`defaultHaikuModel` — 按层覆盖默认模型
+- `subagentModel` — 子代理模型覆盖
+- `effortLevel` — `low`、`medium`、`high` 或 `max`
 
-**Q: What does `cce use` actually modify?**
-A: It writes to `~/.claude/settings.json` (Claude Code) and `~/.config/opencode/opencode.json` (OpenCode).
+## 常见问题
 
-**Q: How are API keys secured?**
-A: The `~/.config/cce` directory is set to `700`, config files to `600` (owner read/write only).
+**Q: `cce use` 具体修改了什么？**
+A: 写入 `~/.claude/settings.json`（Claude Code）。
 
-**Q: Can I override the model in a profile?**
-A: Yes. A profile can specify a `model` field to override the provider's `defaultModel`.
+**Q: API Key 如何保护？**
+A: `~/.config/cce` 目录权限为 `700`，配置文件权限为 `600`（仅所有者可读写）。
+
+**Q: Profile 可以覆盖 Provider 的模型吗？**
+A: 可以。Profile 中指定 `model` 字段即可覆盖 Provider 的 `defaultModel`。
+
+**Q: 什么是 Source 模板？**
+A: 添加 Provider 时，Source 模板提供预填充的默认值（baseURL、模型列表、默认模型）。内置 Source 包括 DeepSeek、Volcengine、Tencent、Alibaba、OpenAI 和 Anthropic。
+
+**Q: 可以自定义内置 Source 模板吗？**
+A: 可以。创建 `~/.config/cce/sources.json` 写入覆盖内容即可生效，格式与 `src/core/sources.json` 相同，优先级高于内置模板。
+
+**Q: Provider 上的 `source` 字段有什么用？**
+A: 记录创建此 Provider 时使用的模板标识，作为配置来源标记，不影响运行时行为。
 
 ## License
 
