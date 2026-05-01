@@ -2,7 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { logger } from '../utils/logger.js';
 import { validateName } from '../utils/validation.js';
-import type { Provider, ProviderType, ValidationError, VendorType } from '../types/index.js';
+import type { Provider, ProviderType, ValidationError, SourceType } from '../types/index.js';
+import { validSources } from '../types/index.js';
 import { PROVIDERS_DIR, PROFILES_DIR } from './config.js';
 
 // ============================================================================
@@ -27,6 +28,17 @@ async function ensureProvidersDir(): Promise<void> {
 // ============================================================================
 // Provider Type Migration
 // ============================================================================
+
+/** 旧字段迁移 — vendor → source（读取时内存映射，无写副作用） */
+function migrateVendorToSource(data: Record<string, unknown>): void {
+  if (data.source === undefined && data.vendor !== undefined) {
+    data.source = data.vendor;
+    delete data.vendor;
+  }
+  if (!data.source) {
+    data.source = 'custom';
+  }
+}
 
 /** 旧类型别名映射 — 自动迁移到新类型 */
 const TYPE_ALIASES: Record<string, ProviderType> = {
@@ -68,17 +80,8 @@ export function validateProvider(data: Partial<Provider>): ValidationError[] {
     errors.push({ field: 'type', message: `Provider type 必须是: ${validTypes.join(', ')}` });
   }
 
-  const validVendors: VendorType[] = [
-    'deepseek',
-    'volcengine',
-    'tencent',
-    'alibaba',
-    'openai',
-    'anthropic',
-    'custom',
-  ];
-  if (data.vendor !== undefined && !validVendors.includes(data.vendor as VendorType)) {
-    errors.push({ field: 'vendor', message: `vendor 必须是: ${validVendors.join(', ')}` });
+  if (data.source !== undefined && !validSources.includes(data.source as SourceType)) {
+    errors.push({ field: 'source', message: `source 必须是: ${validSources.join(', ')}` });
   }
 
   if (!data.baseURL || typeof data.baseURL !== 'string' || data.baseURL.trim() === '') {
@@ -125,7 +128,12 @@ export async function listProviders(): Promise<Provider[]> {
 
       const filePath = path.join(PROVIDERS_DIR, file);
       const content = await fs.readFile(filePath, 'utf-8');
-      const provider = JSON.parse(content) as Provider;
+      const data = JSON.parse(content) as Record<string, unknown>;
+
+      // 迁移 vendor → source
+      migrateVendorToSource(data);
+
+      const provider = data as unknown as Provider;
 
       // 迁移旧类型
       await migrateProviderType(provider);
@@ -160,7 +168,12 @@ export async function getProvider(name: string): Promise<Provider | null> {
 
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    const provider = JSON.parse(content) as Provider;
+    const data = JSON.parse(content) as Record<string, unknown>;
+
+    // 迁移 vendor → source
+    migrateVendorToSource(data);
+
+    const provider = data as unknown as Provider;
 
     // 迁移旧类型
     await migrateProviderType(provider);

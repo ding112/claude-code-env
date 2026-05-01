@@ -3,3 +3,4 @@ dist/
 .worktrees/
 .claude/worktrees
 .idea/
+.planning/

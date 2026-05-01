@@ -1,6 +1,6 @@
 {
   "name": "@mengzai1/cce",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Claude Code 配置切换工具 - 管理多个 API Provider/Profile 并快速切换",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

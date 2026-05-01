@@ -1,8 +1,9 @@
 import inquirer from 'inquirer';
-import open from 'open';
 import { logger } from '../utils/logger.js';
 import { validateName } from '../utils/validation.js';
-import type { Provider, VendorType } from '../types/index.js';
+import type { Provider, SourceType } from '../types/index.js';
+import { validSources } from '../types/index.js';
+import { getTemplate } from '../core/sourceTemplates.js';
 import {
   listProviders,
   getProvider,
@@ -12,13 +13,6 @@ import {
   isProviderInUse,
   getProviderUsage,
 } from '../core/provider.js';
-
-// ============================================================================
-// 安全权限常量
-// ============================================================================
-
-/** 敏感文件安全权限: 0o600 (仅所有者可读写) */
-const SECURE_FILE_MODE = 0o600;
 
 // ============================================================================
 // Helper Functions
@@ -36,8 +30,8 @@ const TYPE_OPTIONS = [
   { name: '自定义', value: 'custom' },
 ] as const;
 
-// Vendor 选项映射
-const VENDOR_OPTIONS = [
+// Source 选项映射
+const SOURCE_OPTIONS = [
   { name: 'DeepSeek', value: 'deepseek' },
   { name: 'Volcengine', value: 'volcengine' },
   { name: 'Tencent', value: 'tencent' },
@@ -47,17 +41,8 @@ const VENDOR_OPTIONS = [
   { name: 'Custom', value: 'custom' },
 ] as const;
 
-export function sanitizeVendorInput(input: string): VendorType {
-  const validVendors: VendorType[] = [
-    'deepseek',
-    'volcengine',
-    'tencent',
-    'alibaba',
-    'openai',
-    'anthropic',
-    'custom',
-  ];
-  return validVendors.includes(input as VendorType) ? (input as VendorType) : 'custom';
+export function sanitizeSourceInput(input: string): SourceType {
+  return validSources.includes(input as SourceType) ? (input as SourceType) : 'custom';
 }
 
 function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthropic-compatible' | 'custom' {
@@ -73,18 +58,36 @@ function getProviderTypeFromValue(value: string): 'openai-compatible' | 'anthrop
 
 export async function providerAddCommand(): Promise<void> {
   try {
+    // ========================================================================
+    // Phase 1: 选择 Source，加载模板
+    // ========================================================================
+
+    const { source } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'source',
+        message: '选择来源 (Source) — 模板将自动填充默认值:',
+        choices: SOURCE_OPTIONS,
+      },
+    ]);
+
+    const template = getTemplate(source as SourceType);
+
+    if (template?.description) {
+      console.log(`  ${template.description}`);
+    }
+
+    // ========================================================================
+    // Phase 2: 填写 Provider 配置（模板值作为默认值）
+    // ========================================================================
+
     const answers = await inquirer.prompt([
       {
         type: 'list',
         name: 'type',
         message: '选择 Provider 类型:',
+        default: template?.type,
         choices: TYPE_OPTIONS,
-      },
-      {
-        type: 'list',
-        name: 'vendor',
-        message: '选择 Vendor (供应商):',
-        choices: VENDOR_OPTIONS,
       },
       {
         type: 'input',
@@ -93,7 +96,6 @@ export async function providerAddCommand(): Promise<void> {
         validate: (input: string) => {
           const trimmed = input.trim();
           if (!trimmed) return '配置名称不能为空';
-          // 检查路径遍历字符
           if (trimmed.includes('..') || trimmed.includes('/') || trimmed.includes('\\')) {
             return '配置名称包含非法字符';
           }
@@ -103,12 +105,14 @@ export async function providerAddCommand(): Promise<void> {
       {
         type: 'input',
         name: 'displayName',
-        message: '显示名称 (可选，留空则使用配置名称):',
+        message: '显示名称 (可选):',
+        default: template?.displayName,
       },
       {
         type: 'input',
         name: 'baseURL',
         message: 'Base URL:',
+        default: template?.baseURL || undefined,
         validate: (input: string) => {
           if (!input.trim()) return 'Base URL 不能为空';
           try {
@@ -133,6 +137,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'models',
         message: '可用模型 (用逗号分隔):',
+        default: (template?.models ?? []).join(', ') || undefined,
         validate: (input: string) => {
           const models = input.split(',').map(m => m.trim()).filter(m => m);
           if (models.length === 0) return '至少需要提供一个模型';
@@ -143,6 +148,7 @@ export async function providerAddCommand(): Promise<void> {
         type: 'input',
         name: 'defaultModel',
         message: '默认模型:',
+        default: template?.defaultModel || undefined,
         validate: (input: string) => {
           if (!input.trim()) return '默认模型不能为空';
           return true;
@@ -153,7 +159,7 @@ export async function providerAddCommand(): Promise<void> {
     const models = answers.models.split(',').map((m: string) => m.trim()).filter((m: string) => m);
 
     if (!models.includes(answers.defaultModel)) {
-      console.log(`⚠ 默认模型 "${answers.defaultModel}" 不在可用模型列表中，已自动添加`);
+      console.log(`  ⚠ 默认模型 "${answers.defaultModel}" 不在可用模型列表中，已自动添加`);
       models.push(answers.defaultModel);
     }
 
@@ -161,7 +167,7 @@ export async function providerAddCommand(): Promise<void> {
       name: answers.name.trim(),
       displayName: answers.displayName?.trim() || answers.name.trim(),
       type: getProviderTypeFromValue(answers.type),
-      vendor: sanitizeVendorInput(answers.vendor),
+      source: sanitizeSourceInput(source),
       baseURL: answers.baseURL,
       apiKey: answers.apiKey,
       models,
@@ -172,10 +178,10 @@ export async function providerAddCommand(): Promise<void> {
 
     await saveProvider(provider);
 
-    console.log(`✓ Provider '${provider.name}' 已创建`);
+    console.log(`✔ Provider '${provider.name}' 已创建`);
     console.log(`  显示名称: ${provider.displayName}`);
     console.log(`  类型: ${provider.type}`);
-    console.log(`  Vendor: ${provider.vendor}`);
+    console.log(`  Source: ${provider.source}`);
     console.log(`  Base URL: ${provider.baseURL}`);
     console.log(`  模型数: ${provider.models.length}`);
     console.log(`  默认模型: ${provider.defaultModel}`);
@@ -206,8 +212,8 @@ export async function providerListCommand(): Promise<void> {
       console.log(`  ${provider.name}`);
       console.log(`    显示名称: ${provider.displayName}`);
       console.log(`    类型: ${provider.type}`);
-      if (provider.vendor) {
-        console.log(`    Vendor: ${provider.vendor}`);
+      if (provider.source) {
+        console.log(`    Source: ${provider.source}`);
       }
       console.log(`    Base URL: ${provider.baseURL}`);
       console.log(`    模型 (${provider.models.length}):`);
@@ -249,8 +255,8 @@ export async function providerShowCommand(name: string): Promise<void> {
     console.log(`Provider: ${provider.name}`);
     console.log(`  显示名称: ${provider.displayName}`);
     console.log(`  类型: ${provider.type}`);
-    if (provider.vendor) {
-      console.log(`  Vendor: ${provider.vendor}`);
+    if (provider.source) {
+      console.log(`  Source: ${provider.source}`);
     }
     console.log(`  Base URL: ${provider.baseURL}`);
     console.log(`  API Key: ${maskApiKey(provider.apiKey)}`);
@@ -288,65 +294,146 @@ export async function providerEditCommand(name: string): Promise<void> {
       process.exit(1);
     }
 
-    const { PROVIDERS_DIR } = await import('../core/config.js');
-    const path = await import('path');
-    const fs = await import('fs/promises');
+    // 显示当前 Provider 摘要
+    console.log();
+    console.log(`┌─ 当前 Provider ─────────────────────────────┐`);
+    console.log(`  Name:        ${provider.name}`);
+    console.log(`  Source:      ${provider.source}`);
+    console.log(`  Type:        ${provider.type}`);
+    console.log(`  Base URL:    ${provider.baseURL}`);
+    console.log(`  API Key:     ${maskApiKey(provider.apiKey)}`);
+    console.log(`  Models (${provider.models.length}):  ${provider.models.join(', ')}`);
+    console.log(`  Default:     ${provider.defaultModel}`);
+    console.log(`└─────────────────────────────────────────────┘`);
+    console.log();
 
-    const filePath = path.join(PROVIDERS_DIR, `${name}.json`);
-
-    // 写入临时文件供编辑
-    const tempContent = JSON.stringify(provider, null, 2);
-    const tempPath = `${filePath}.tmp`;
-
-    await fs.writeFile(tempPath, tempContent, {
-      encoding: 'utf-8',
-      mode: SECURE_FILE_MODE,
-    });
-
-    // 打开编辑器
-    const editor = process.env.EDITOR || process.env.VISUAL || 'code';
-    console.log(`使用编辑器: ${editor}`);
-    console.log(`文件: ${tempPath}`);
-
-    try {
-      await open(tempPath, { app: { name: editor } });
-    } catch (err) {
-      console.log('无法打开编辑器，请手动编辑以下内容:');
-      console.log(tempContent);
-      throw err;
+    // 交互式表单编辑（所有字段预填当前值作为默认值）
+    interface EditAnswers {
+      type: string;
+      displayName: string;
+      baseURL: string;
+      modifyApiKey: boolean;
+      apiKey: string;
+      models: string;
+      defaultModel: string;
     }
 
-    // 等待用户完成编辑
-    console.log('编辑完成后按回车继续...');
-    await inquirer.prompt([{ type: 'input', name: 'continue', message: '按回车继续' }]);
+    const answers = await inquirer.prompt<EditAnswers>([
+      {
+        type: 'list',
+        name: 'type',
+        message: '选择 Provider 类型:',
+        default: provider.type,
+        choices: TYPE_OPTIONS,
+      },
+      {
+        type: 'input',
+        name: 'displayName',
+        message: '显示名称 (可选):',
+        default: provider.displayName,
+      },
+      {
+        type: 'input',
+        name: 'baseURL',
+        message: 'Base URL:',
+        default: provider.baseURL,
+        validate: (input: string) => {
+          if (!input.trim()) return 'Base URL 不能为空';
+          try {
+            new URL(input);
+            return true;
+          } catch {
+            return 'Base URL 格式不正确';
+          }
+        },
+      },
+      {
+        type: 'confirm',
+        name: 'modifyApiKey',
+        message: '是否修改 API Key?',
+        default: false,
+      },
+      {
+        type: 'password',
+        name: 'apiKey',
+        message: 'API Key:',
+        mask: '*',
+        when: (answers: EditAnswers) => answers.modifyApiKey,
+        validate: (input: string) => {
+          if (!input.trim()) return 'API Key 不能为空';
+          return true;
+        },
+      },
+      {
+        type: 'input',
+        name: 'models',
+        message: '可用模型 (用逗号分隔):',
+        default: provider.models.join(', '),
+        validate: (input: string) => {
+          const models = input.split(',').map(m => m.trim()).filter(m => m);
+          if (models.length === 0) return '至少需要提供一个模型';
+          return true;
+        },
+      },
+      {
+        type: 'input',
+        name: 'defaultModel',
+        message: '默认模型:',
+        default: provider.defaultModel,
+        validate: (input: string) => {
+          if (!input.trim()) return '默认模型不能为空';
+          return true;
+        },
+      },
+    ]);
 
-    // 读取编辑后的内容
-    const editedContent = await fs.readFile(tempPath, 'utf-8');
-    const editedProvider = JSON.parse(editedContent);
+    // 处理 API Key：用户未修改时保留旧值
+    const apiKey = answers.modifyApiKey ? answers.apiKey : provider.apiKey;
 
-    // 验证
-    const { validateProvider } = await import('../core/provider.js');
-    const errors = validateProvider(editedProvider);
+    // 解析 models
+    const models = answers.models.split(',').map((m: string) => m.trim()).filter((m: string) => m);
 
-    if (errors.length > 0) {
-      console.log('❌ 验证失败:');
-      for (const error of errors) {
-        console.log(`  ${error.field}: ${error.message}`);
-      }
-      process.exit(1);
+    if (!models.includes(answers.defaultModel)) {
+      console.log(`  ⚠ 默认模型 "${answers.defaultModel}" 不在可用模型列表中，已自动添加`);
+      models.push(answers.defaultModel);
     }
 
-    // 保存
-    await saveProvider(editedProvider);
+    // 构建更新的 Provider 对象
+    const updatedProvider: Provider = {
+      ...provider,
+      type: getProviderTypeFromValue(answers.type),
+      displayName: answers.displayName?.trim() || provider.name,
+      baseURL: answers.baseURL,
+      apiKey,
+      models,
+      defaultModel: answers.defaultModel,
+      updatedAt: new Date().toISOString(),
+    };
 
-    // 清理临时文件
-    try {
-      await fs.unlink(tempPath);
-    } catch {
-      // 忽略
-    }
+    await saveProvider(updatedProvider);
 
+    // 显示更新摘要
+    console.log();
     console.log(`✓ Provider '${name}' 已更新`);
+
+    // 仅显示有变化的字段
+    if (updatedProvider.type !== provider.type) {
+      console.log(`  类型: ${provider.type} → ${updatedProvider.type}`);
+    }
+    if (updatedProvider.displayName !== provider.displayName) {
+      console.log(`  显示名称: ${provider.displayName} → ${updatedProvider.displayName}`);
+    }
+    if (updatedProvider.baseURL !== provider.baseURL) {
+      console.log(`  Base URL: ${provider.baseURL} → ${updatedProvider.baseURL}`);
+    }
+    if (updatedProvider.defaultModel !== provider.defaultModel) {
+      console.log(`  默认模型: ${provider.defaultModel} → ${updatedProvider.defaultModel}`);
+    }
+    if (apiKey !== provider.apiKey) {
+      console.log(`  API Key: 已更新`);
+    }
+
+    process.exit(0);
   } catch (err) {
     logger.error('编辑 Provider 失败', err);
     process.exit(1);

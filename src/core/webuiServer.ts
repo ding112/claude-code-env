@@ -4,7 +4,9 @@ import { logger } from '../utils/logger.js';
 import { listProfiles, getProfile, saveProfile, deleteProfile, getActiveProfile } from './profile.js';
 import { listProviders, getProvider, saveProvider, deleteProvider, isProviderInUse, getProviderUsage } from './provider.js';
 import { switchProfile } from './switch.js';
-import type { Profile, Provider, ProviderType, VendorType, ProfileClaudeCodeSettings } from '../types/index.js';
+import { getTemplate, getAllTemplates } from './sourceTemplates.js';
+import type { Profile, Provider, ProviderType, SourceType, ProfileClaudeCodeSettings } from '../types/index.js';
+import { validSources } from '../types/index.js';
 
 // WebUI 静态文件目录
 const WEBUI_DIR = path.resolve(__dirname, '..', '..', 'webui');
@@ -40,7 +42,7 @@ function sanitizeProvider(provider: Provider) {
     name: provider.name,
     displayName: provider.displayName,
     type: provider.type,
-    vendor: provider.vendor,
+    source: provider.source,
     baseURL: provider.baseURL,
     models: provider.models,
     defaultModel: provider.defaultModel,
@@ -380,7 +382,10 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   // 创建 provider
   app.post('/api/providers', async (req, res) => {
     try {
-      const { name, displayName, type, vendor, baseURL, apiKey, models, defaultModel } = req.body;
+      const { name, displayName, type, vendor, source, baseURL, apiKey, models, defaultModel } = req.body;
+
+      // source 优先，兼容旧 vendor 字段
+      const finalSource = source || vendor;
 
       // 验证必填字段 (displayName 可选)
       if (!name || !type || !baseURL || !apiKey || !models || !defaultModel) {
@@ -395,9 +400,9 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         return;
       }
 
-      // 验证 vendor 为必填
-      if (!vendor) {
-        res.status(400).json({ error: 'vendor 为必填项' });
+      // 验证 source 为必填
+      if (!finalSource) {
+        res.status(400).json({ error: 'source 为必填项' });
         return;
       }
 
@@ -455,7 +460,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         name,
         displayName: displayName?.trim() || name, // displayName 可选，默认使用 name
         type,
-        vendor,
+        source: finalSource,
         baseURL: baseURL.trim().replace(/\/+$/, ''), // 移除末尾斜杠
         apiKey: apiKey.trim(),
         models: cleanedModels,
@@ -477,7 +482,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
   app.put('/api/providers/:name', async (req, res) => {
     try {
       const name = req.params.name;
-      const { displayName, type, vendor, baseURL, apiKey, models, defaultModel } = req.body;
+      const { displayName, type, vendor, source, baseURL, apiKey, models, defaultModel } = req.body;
 
       const existing = await getProvider(name);
       if (!existing) {
@@ -497,10 +502,12 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         }
       }
 
-      // 验证 vendor 为必填（创建时已验证，编辑时若历史数据无 vendor 需补全）
-      const finalVendor = vendor !== undefined ? vendor as VendorType : existing.vendor;
-      if (!finalVendor) {
-        res.status(400).json({ error: 'vendor 为必填项，请补选 vendor' });
+      // source 优先，兼容旧 vendor 字段
+      const finalSource = (source || vendor) !== undefined
+        ? ((source || vendor) as SourceType)
+        : existing.source;
+      if (!finalSource) {
+        res.status(400).json({ error: 'source 为必填项，请补选 source' });
         return;
       }
 
@@ -542,7 +549,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         name,
         displayName: displayName?.trim() ?? existing.displayName,
         type: finalType,
-        vendor: finalVendor,
+        source: finalSource,
         baseURL: baseURL ? baseURL.trim().replace(/\/+$/, '') : existing.baseURL,
         apiKey: apiKey?.trim() ?? existing.apiKey,
         models: cleanedModels,
@@ -587,6 +594,25 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
       logger.error('删除 provider 失败', error);
       const message = error instanceof Error ? error.message : '删除失败';
       res.status(500).json({ error: message });
+    }
+  });
+
+  // 获取所有 Source 模板
+  app.get('/api/source-templates', async (req, res) => {
+    try {
+      const templates = getAllTemplates().map(([source, tmpl]) => ({
+        source: tmpl.source,
+        displayName: tmpl.displayName,
+        type: tmpl.type,
+        baseURL: tmpl.baseURL,
+        models: tmpl.models,
+        defaultModel: tmpl.defaultModel,
+        description: tmpl.description,
+      }));
+      res.json({ templates });
+    } catch (error) {
+      logger.error('获取 Source 模板失败', error);
+      res.status(500).json({ error: '获取 Source 模板失败' });
     }
   });
 

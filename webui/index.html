@@ -29,6 +29,9 @@
     <!-- 成功提示 -->
     <div id="success-toast" class="toast success hidden"></div>
 
+    <!-- 模板应用提示 -->
+    <div id="info-toast" class="toast info hidden"></div>
+
     <!-- 主内容区 -->
     <main class="main">
       <!-- Tab 切换 -->
@@ -76,7 +79,7 @@
               <tr>
                 <th>名称</th>
                 <th>类型</th>
-                <th>供应商</th>
+                <th>来源</th>
                 <th>Base URL</th>
                 <th>模型数</th>
                 <th>操作</th>
@@ -177,7 +180,7 @@
       </div>
       <div class="modal-footer">
         <button id="create-cancel" class="btn btn-secondary">取消</button>
-        <button id="create-submit" class="btn btn-primary">创建</button>
+        <button id="create-submit" class="btn btn-primary" form="create-form">创建</button>
       </div>
     </div>
   </div>
@@ -216,11 +219,11 @@
           </div>
 
           <div class="form-group">
-            <label for="provider-vendor">供应商 *</label>
-            <select id="provider-vendor" name="vendor" required>
-              <option value="">请选择供应商</option>
+            <label for="provider-source">来源 *</label>
+            <select id="provider-source" name="source" required>
+              <option value="">请选择来源</option>
             </select>
-            <small class="form-hint">供应商类型，用于 Claude Code 高级配置</small>
+            <small class="form-hint">配置来源类型，用于 Claude Code 高级配置</small>
           </div>
 
           <div class="form-group">
@@ -239,8 +242,9 @@
           </div>
 
           <div class="form-group">
-            <label for="provider-api-key">API Key *</label>
-            <input type="password" id="provider-api-key" name="apiKey" required placeholder="输入 API Key">
+            <label for="provider-api-key">API Key <span id="api-key-required-mark">*</span></label>
+            <input type="password" id="provider-api-key" name="apiKey" placeholder="sk-..." autocomplete="off">
+            <small class="form-hint">创建时必填，编辑时留空则保留原值</small>
           </div>
 
           <div class="form-group">
@@ -259,7 +263,7 @@
       </div>
       <div class="modal-footer">
         <button id="provider-cancel" class="btn btn-secondary">取消</button>
-        <button id="provider-submit" class="btn btn-primary">保存</button>
+        <button id="provider-submit" class="btn btn-primary" form="provider-form">保存</button>
       </div>
     </div>
   </div>
@@ -329,7 +333,7 @@
       </div>
       <div class="modal-footer">
         <button id="edit-cancel" class="btn btn-secondary">取消</button>
-        <button id="edit-submit" class="btn btn-primary">保存</button>
+        <button id="edit-submit" class="btn btn-primary" form="edit-form">保存</button>
       </div>
     </div>
   </div>

@@ -1,0 +1,54 @@
+{
+  "deepseek": {
+    "source": "deepseek",
+    "displayName": "DeepSeek",
+    "type": "anthropic-compatible",
+    "baseURL": "https://api.deepseek.com/anthropic",
+    "models": ["deepseek-v4-flash", "deepseek-v4-pro[1m]"],
+    "defaultModel": "deepseek-v4-flash",
+    "description": "DeepSeek API — 兼容 anthropic 接口协议"
+  },
+  "volcengine": {
+    "source": "volcengine",
+    "displayName": "Volcengine (火山引擎)",
+    "type": "anthropic-compatible",
+    "baseURL": "https://ark.cn-beijing.volces.com/api/coding",
+    "models": [
+      "doubao-seed-2.0-code",
+      "doubao-seed-2.0-pro",
+      "doubao-seed-2.0-lite",
+      "minimax-m2.7",
+      "glm-5.1",
+      "kimi-k2.6"
+    ],
+    "defaultModel": "glm-5.1",
+    "description": "火山引擎方舟大模型推理 API"
+  },
+  "tencent": {
+    "source": "tencent",
+    "displayName": "Tencent (腾讯云)",
+    "type": "openai-compatible",
+    "baseURL": "https://api.lkeap.cloud.tencent.com/v1",
+    "models": ["deepseek-v3", "deepseek-r1", "hunyuan-turbo"],
+    "defaultModel": "deepseek-v3",
+    "description": "腾讯云大模型 API（兼容 OpenAI 协议）"
+  },
+  "alibaba": {
+    "source": "alibaba",
+    "displayName": "Alibaba (阿里云)",
+    "type": "anthropic-compatible",
+    "baseURL": "https://coding.dashscope.aliyuncs.com/apps/anthropic",
+    "models": ["glm-5", "MiniMax-M2.5", "kimi-k2.5", "qwen3.6-plus"],
+    "defaultModel": "glm-5",
+    "description": "阿里云百炼大模型服务平台"
+  },
+  "custom": {
+    "source": "custom",
+    "displayName": "自定义",
+    "type": "anthropic-compatible",
+    "baseURL": "",
+    "models": [],
+    "defaultModel": "",
+    "description": "自定义 API 端点 — 需手动填写所有配置"
+  }
+}

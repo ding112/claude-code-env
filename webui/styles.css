@@ -294,6 +294,10 @@ body {
   border-left: 4px solid var(--error);
 }
 
+.toast.info {
+  border-left: 4px solid var(--primary);
+}
+
 .hidden {
   display: none !important;
 }
@@ -627,4 +631,20 @@ body {
 
 .advanced-settings-details div {
   margin-top: 4px;
+}
+
+/* Template fill highlight animation */
+@keyframes template-highlight {
+  0% {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    border-color: var(--border);
+    box-shadow: none;
+  }
+}
+
+.template-filled {
+  animation: template-highlight 1.5s ease-out;
 }

@@ -1,33 +1,16 @@
 // API 基础路径
 const API_BASE = '/api';
 
-// 所有可用的 Vendor 选项（不与类型联动）
-const ALL_VENDORS = [
-  { name: 'DeepSeek', value: 'deepseek' },
-  { name: '火山引擎', value: 'volcengine' },
-  { name: '腾讯', value: 'tencent' },
-  { name: '阿里', value: 'alibaba' },
-  { name: 'OpenAI', value: 'openai' },
-  { name: 'Anthropic', value: 'anthropic' },
-  { name: '自定义', value: 'custom' },
-];
-
-// Vendor 显示名称映射
-const VENDOR_DISPLAY_NAMES = {
-  'deepseek': 'DeepSeek',
-  'volcengine': '火山引擎',
-  'tencent': '腾讯',
-  'alibaba': '阿里',
-  'openai': 'OpenAI',
-  'anthropic': 'Anthropic',
-  'custom': '自定义',
-};
-
 // 状态
 let profiles = [];
 let providers = [];
 let currentProfile = null;
 let editingProviderName = null; // 用于编辑模式
+
+// Source 模板数据（通过 API 动态加载）
+let sourceTemplates = [];        // [{ source, displayName, type, baseURL, models, defaultModel, description }]
+// 记录上次 Source 时的预填字段值，用于脏字段检测
+let lastPrefilledValues = { type: '', baseURL: '', models: '', defaultModel: '' };
 
 // DOM 元素
 const elements = {
@@ -59,7 +42,7 @@ const elements = {
   providerForm: document.getElementById('provider-form'),
   providerModelsInput: document.getElementById('provider-models'),
   providerDefaultModel: document.getElementById('provider-default-model'),
-  providerVendorSelect: document.getElementById('provider-vendor'),
+  providerSourceSelect: document.getElementById('provider-source'),
   providerTypeSelect: document.getElementById('provider-type'),
 };
 
@@ -70,11 +53,24 @@ function showError(message) {
   setTimeout(() => elements.errorToast.classList.add('hidden'), 3000);
 }
 
+// Toast 定时器
+let infoToastTimer = null;
+
 // 显示成功提示
 function showSuccess(message) {
+  clearTimeout(infoToastTimer);
   elements.successToast.textContent = message;
   elements.successToast.classList.remove('hidden');
-  setTimeout(() => elements.successToast.classList.add('hidden'), 3000);
+  infoToastTimer = setTimeout(() => elements.successToast.classList.add('hidden'), 3000);
+}
+
+const infoToast = document.getElementById('info-toast');
+
+function showInfo(message) {
+  clearTimeout(infoToastTimer);
+  infoToast.textContent = message;
+  infoToast.classList.remove('hidden');
+  infoToastTimer = setTimeout(() => infoToast.classList.add('hidden'), 2500);
 }
 
 // 格式化日期
@@ -99,20 +95,22 @@ function getProviderTypeBadge(type) {
   return badges[type] || `<span class="badge">${escapeHtml(type)}</span>`;
 }
 
-// 更新 Provider Vendor 下拉框选项（不依赖类型选择）
-function updateProviderVendorOptions(selectedVendor = null) {
-  const vendorSelect = elements.providerVendorSelect;
+// 更新 Provider Source 下拉框选项（从动态加载的模板数据生成）
+function updateProviderSourceOptions(selectedSource = null) {
+  const sourceSelect = elements.providerSourceSelect;
+  sourceSelect.innerHTML = '<option value="">请选择来源</option>';
 
-  vendorSelect.innerHTML = '<option value="">请选择供应商</option>';
+  // 如果模板数据尚未加载，留空
+  if (sourceTemplates.length === 0) return;
 
-  ALL_VENDORS.forEach(opt => {
+  sourceTemplates.forEach(tmpl => {
     const option = document.createElement('option');
-    option.value = opt.value;
-    option.textContent = opt.name;
-    if (opt.value === selectedVendor) {
+    option.value = tmpl.source;
+    option.textContent = tmpl.displayName;
+    if (tmpl.source === selectedSource) {
       option.selected = true;
     }
-    vendorSelect.appendChild(option);
+    sourceSelect.appendChild(option);
   });
 }
 
@@ -187,6 +185,17 @@ async function apiRequest(endpoint, options = {}) {
   return response.json();
 }
 
+// 从 API 加载 Source 模板数据
+async function loadSourceTemplates() {
+  try {
+    const data = await apiRequest('/source-templates');
+    sourceTemplates = data.templates || [];
+  } catch (error) {
+    console.error('加载 Source 模板失败:', error);
+    sourceTemplates = [];
+  }
+}
+
 // 加载当前 profile
 async function loadCurrent() {
   try {
@@ -243,7 +252,8 @@ function renderProviders() {
   }
 
   elements.providersTbody.innerHTML = providers.map(provider => {
-    const vendorDisplay = VENDOR_DISPLAY_NAMES[provider.vendor] || provider.vendor || '-';
+    const sourceTmpl = sourceTemplates.find(t => t.source === provider.source);
+    const sourceDisplay = sourceTmpl ? sourceTmpl.displayName : (provider.source || '-');
     return `
       <tr>
         <td>
@@ -251,7 +261,7 @@ function renderProviders() {
           <div class="profile-model">${escapeHtml(provider.displayName)}</div>
         </td>
         <td>${getProviderTypeBadge(provider.type)}</td>
-        <td><span class="badge badge-vendor">${escapeHtml(vendorDisplay)}</span></td>
+        <td><span class="badge badge-vendor">${escapeHtml(sourceDisplay)}</span></td>
         <td><code class="url-code">${escapeHtml(provider.baseURL)}</code></td>
         <td>${provider.models?.length || 0}</td>
         <td class="actions">
@@ -509,7 +519,8 @@ function showProviderDetails(name) {
 
   elements.providerDetailsTitle.textContent = `${provider.displayName} 详情`;
 
-  const vendorDisplay = VENDOR_DISPLAY_NAMES[provider.vendor] || provider.vendor || '-';
+  const sourceTmpl = sourceTemplates.find(t => t.source === provider.source);
+  const sourceDisplay = sourceTmpl ? sourceTmpl.displayName : (provider.source || '-');
 
   let html = `
     <div class="detail-group">
@@ -525,8 +536,8 @@ function showProviderDetails(name) {
       <div>${getProviderTypeBadge(provider.type)}</div>
     </div>
     <div class="detail-group">
-      <label>Vendor</label>
-      <div>${escapeHtml(vendorDisplay)}</div>
+      <label>来源</label>
+      <div>${escapeHtml(sourceDisplay)}</div>
     </div>
     <div class="detail-group">
       <label>Base URL</label>
@@ -566,12 +577,14 @@ function closeProviderDetails() {
 
 // 打开 Provider 创建/编辑弹窗
 function openProviderModal(name = null) {
+  // 重置脏字段追踪
+  lastPrefilledValues = { type: '', baseURL: '', models: '', defaultModel: '' };
   editingProviderName = name;
   elements.providerForm.reset();
   elements.providerDefaultModel.innerHTML = '<option value="">请先填写可用模型</option>';
 
   if (name) {
-    // 编辑模式
+    // 编辑模式 — 先填充现有数据再预填（D-09: 编辑模式也触发模板预填）
     elements.providerModalTitle.textContent = '编辑 Provider';
     const provider = providers.find(p => p.name === name);
     if (provider) {
@@ -582,20 +595,79 @@ function openProviderModal(name = null) {
       document.getElementById('provider-api-key').value = provider.apiKey || '';
       document.getElementById('provider-models').value = (provider.models || []).join(', ');
       updateProviderDefaultModelSelect(provider.defaultModel);
-      // 更新 vendor 下拉框并设置选中值
-      updateProviderVendorOptions(provider.vendor);
-      // 编辑模式下名称不可修改
+      // 更新 source 下拉框并设置选中值
+      updateProviderSourceOptions(provider.source);
       document.getElementById('provider-name').disabled = true;
+      // 编辑模式下 Source 变化后自动应用模板（通过已有 change 事件处理器触发）
     }
+    document.getElementById('provider-api-key').removeAttribute('required');
+    document.getElementById('api-key-required-mark').textContent = '';
   } else {
     // 创建模式
     elements.providerModalTitle.textContent = '新建 Provider';
     document.getElementById('provider-name').disabled = false;
-    // 重置 vendor 下拉框
-    updateProviderVendorOptions();
+    updateProviderSourceOptions();
+    document.getElementById('provider-api-key').setAttribute('required', '');
+    document.getElementById('api-key-required-mark').textContent = '*';
   }
 
   elements.providerModal.classList.remove('hidden');
+}
+
+// 根据选中的 Source 应用模板预填
+function applySourceTemplate(source) {
+  if (!source || source === 'custom') {
+    // Custom source — 不留任何默认值（D-07 的 Phase 7 决策）
+    // 仅将 type 设为 openai-compatible
+    document.getElementById('provider-type').value = 'openai-compatible';
+    // 清空其他预填字段
+    const fieldsToClear = ['provider-base-url', 'provider-models'];
+    fieldsToClear.forEach(id => {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.closest('.form-group')?.classList.remove('template-filled');
+    });
+    updateProviderDefaultModelSelect();
+    lastPrefilledValues = { type: 'openai-compatible', baseURL: '', models: '', defaultModel: '' };
+    return;
+  }
+
+  const tmpl = sourceTemplates.find(t => t.source === source);
+  if (!tmpl) return;
+
+  // 填写预填字段
+  const fills = [
+    { id: 'provider-type', value: tmpl.type },
+    { id: 'provider-base-url', value: tmpl.baseURL },
+    { id: 'provider-models', value: tmpl.models.join(', ') },
+  ];
+
+  fills.forEach(({ id, value }) => {
+    const el = document.getElementById(id);
+    el.value = value;
+    // 添加绿色高亮动画
+    const group = el.closest('.form-group');
+    if (group) {
+      group.classList.remove('template-filled');
+      // 触发 reflow 让动画重新播放
+      void group.offsetWidth;
+      group.classList.add('template-filled');
+    }
+  });
+
+  // 更新默认模型下拉框
+  updateProviderDefaultModelSelect(tmpl.defaultModel);
+
+  // 记录当前预填值用于脏字段检测
+  lastPrefilledValues = {
+    type: tmpl.type,
+    baseURL: tmpl.baseURL,
+    models: tmpl.models.join(', '),
+    defaultModel: tmpl.defaultModel,
+  };
+
+  // 显示 info toast（D-06）
+  showInfo(`已应用 ${tmpl.displayName} 模板`);
 }
 
 // 关闭 Provider 弹窗
@@ -614,6 +686,22 @@ function updateProviderDefaultModelSelect(selectedModel = null) {
     : models.map(m => `<option value="${escapeHtml(m)}" ${m === selectedModel ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
 }
 
+// 检测预填字段是否被用户修改过
+function arePrefilledFieldsDirty() {
+  const current = {
+    type: document.getElementById('provider-type').value,
+    baseURL: document.getElementById('provider-base-url').value,
+    models: document.getElementById('provider-models').value,
+    defaultModel: document.getElementById('provider-default-model').value,
+  };
+  return (
+    current.type !== lastPrefilledValues.type ||
+    current.baseURL !== lastPrefilledValues.baseURL ||
+    current.models !== lastPrefilledValues.models ||
+    current.defaultModel !== lastPrefilledValues.defaultModel
+  );
+}
+
 // 提交 Provider 表单
 async function submitProviderForm(event) {
   event.preventDefault();
@@ -622,7 +710,7 @@ async function submitProviderForm(event) {
   const name = editingProviderName || formData.get('name')?.toString().trim();
   const displayName = formData.get('displayName')?.toString().trim();
   const type = formData.get('type')?.toString().trim();
-  const vendor = formData.get('vendor')?.toString().trim();
+  const source = formData.get('source')?.toString().trim();
   const baseURL = formData.get('baseURL')?.toString().trim();
   const apiKey = formData.get('apiKey')?.toString().trim();
   const modelsStr = formData.get('models')?.toString().trim();
@@ -632,9 +720,9 @@ async function submitProviderForm(event) {
   const missing = [];
   if (!editingProviderName && !name) missing.push('配置名称');
   if (!type) missing.push('类型');
-  if (!vendor) missing.push('供应商');
+  if (!source) missing.push('来源');
   if (!baseURL) missing.push('Base URL');
-  if (!apiKey) missing.push('API Key');
+  if (!editingProviderName && !apiKey) missing.push('API Key');
   if (!modelsStr) missing.push('可用模型');
   if (!defaultModel) missing.push('默认模型');
   if (missing.length > 0) {
@@ -654,12 +742,15 @@ async function submitProviderForm(event) {
     name,
     displayName,
     type,
-    vendor,
+    source,
     baseURL,
-    apiKey,
     models,
     defaultModel,
   };
+  // 编辑模式且 API Key 为空时，不发送 API Key（后端保留原值）
+  if (!editingProviderName || apiKey) {
+    body.apiKey = apiKey;
+  }
 
   try {
     if (editingProviderName) {
@@ -853,9 +944,12 @@ async function createProfile(event) {
 }
 
 // 初始化
-function init() {
+async function init() {
+  // 先加载 Source 模板，这样 Source 下拉框在 Provider 加载后就有数据
+  await loadSourceTemplates();
+
   // 加载数据
-  Promise.all([loadProviders(), loadCurrent(), loadProfiles()]);
+  await Promise.all([loadProviders(), loadCurrent(), loadProfiles()]);
 
   // 刷新按钮
   document.getElementById('refresh-btn').addEventListener('click', () => {
@@ -897,7 +991,6 @@ function init() {
   document.getElementById('create-cancel').addEventListener('click', closeCreateModal);
   document.querySelector('#create-modal .modal-overlay').addEventListener('click', closeCreateModal);
   elements.createForm.addEventListener('submit', createProfile);
-  document.getElementById('create-submit').addEventListener('click', createProfile);
 
   // Provider 选择变化时更新模型提示
   elements.createProvider.addEventListener('change', updateModelHint);
@@ -907,7 +1000,6 @@ function init() {
   document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
   document.querySelector('#edit-modal .modal-overlay').addEventListener('click', closeEditModal);
   elements.editForm.addEventListener('submit', submitEditProfile);
-  document.getElementById('edit-submit').addEventListener('click', submitEditProfile);
   elements.editProvider.addEventListener('change', updateEditModelHint);
 
   // Provider 创建/编辑弹窗
@@ -915,12 +1007,28 @@ function init() {
   document.getElementById('provider-cancel').addEventListener('click', closeProviderModal);
   document.querySelector('#provider-modal .modal-overlay').addEventListener('click', closeProviderModal);
   elements.providerForm.addEventListener('submit', submitProviderForm);
-  document.getElementById('provider-submit').addEventListener('click', submitProviderForm);
 
   // Provider 可用模型输入变化时更新默认模型下拉框
   elements.providerModelsInput.addEventListener('input', updateProviderDefaultModelSelect);
 
-  // Provider 类型变化不再联动 vendor 下拉框
+  // Provider 类型变化不再联动 source 下拉框
+
+  // Source 变化时自动应用模板（D-04）
+  elements.providerSourceSelect.addEventListener('change', function() {
+    const selectedSource = this.value;
+
+    // 检查是否有脏字段
+    if (lastPrefilledValues.type !== '' && arePrefilledFieldsDirty()) {
+      // D-07: 有修改则弹出确认框
+      if (!confirm('更换 Source 将重置预填字段，是否继续？')) {
+        // 取消则恢复原选中值（实际不执行预填）
+        return;
+      }
+    }
+
+    // 应用模板预填（包括 custom 和空值两种情况）
+    applySourceTemplate(selectedSource);
+  });
 }
 
 // 启动
