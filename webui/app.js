@@ -33,6 +33,7 @@ const elements = {
   editForm: document.getElementById('edit-form'),
   editProvider: document.getElementById('edit-provider'),
   editModel: document.getElementById('edit-model'),
+  editSourceEffortHint: document.getElementById('edit-source-effort-hint'),
   // Provider 相关元素
   providerDetailsDrawer: document.getElementById('provider-details-drawer'),
   providerDetailsTitle: document.getElementById('provider-details-title'),
@@ -143,7 +144,7 @@ function collectClaudeCodeSettings(prefix) {
 
 // 将 Claude Code 高级设置应用到表单
 function applyClaudeCodeSettingsToForm(prefix, settings) {
-  if (!settings) return;
+  const normalized = settings || {};
 
   const opusEl = document.getElementById(`${prefix}-default-opus-model`);
   const sonnetEl = document.getElementById(`${prefix}-default-sonnet-model`);
@@ -151,11 +152,11 @@ function applyClaudeCodeSettingsToForm(prefix, settings) {
   const subagentEl = document.getElementById(`${prefix}-subagent-model`);
   const effortEl = document.getElementById(`${prefix}-effort-level`);
 
-  if (opusEl) opusEl.value = settings.defaultOpusModel || '';
-  if (sonnetEl) sonnetEl.value = settings.defaultSonnetModel || '';
-  if (haikuEl) haikuEl.value = settings.defaultHaikuModel || '';
-  if (subagentEl) subagentEl.value = settings.subagentModel || '';
-  if (effortEl) effortEl.value = settings.effortLevel || '';
+  if (opusEl) opusEl.value = normalized.defaultOpusModel || '';
+  if (sonnetEl) sonnetEl.value = normalized.defaultSonnetModel || '';
+  if (haikuEl) haikuEl.value = normalized.defaultHaikuModel || '';
+  if (subagentEl) subagentEl.value = normalized.subagentModel || '';
+  if (effortEl) effortEl.value = normalized.effortLevel || '';
 }
 
 // HTML 转义防止 XSS
@@ -327,6 +328,39 @@ function updateEditModelHint() {
   } else {
     modelInput.placeholder = '选择 Provider 后可用';
   }
+}
+
+function updateEditSourceEffortHint(providerName) {
+  const hintEl = elements.editSourceEffortHint;
+  if (!hintEl) return;
+
+  const provider = providers.find(p => p.name === providerName);
+  const sourceTemplate = sourceTemplates.find(t => t.source === provider?.source);
+  const sourceEffort = sourceTemplate?.claudeCodeSettings?.effortLevel;
+
+  if (!sourceEffort) {
+    hintEl.textContent = '';
+    hintEl.classList.add('hidden');
+    return;
+  }
+
+  hintEl.textContent = `Source 默认 effortLevel: ${sourceEffort}（仅提示，不自动应用）`;
+  hintEl.classList.remove('hidden');
+}
+
+function getSourceClaudeCodeSettingsForProvider(providerName) {
+  const provider = providers.find(p => p.name === providerName);
+  if (!provider?.source) {
+    return undefined;
+  }
+
+  const sourceTemplate = sourceTemplates.find(t => t.source === provider.source);
+  return sourceTemplate?.claudeCodeSettings;
+}
+
+function applyCreateSourceClaudeCodeSettings(providerName) {
+  const sourceSettings = getSourceClaudeCodeSettingsForProvider(providerName);
+  applyClaudeCodeSettingsToForm('create', sourceSettings);
 }
 
 // 更新模型输入提示
@@ -800,6 +834,7 @@ async function deleteProvider(name) {
 function openCreateModal() {
   elements.createForm.reset();
   elements.createModel.placeholder = '选择 Provider 后可用';
+  applyCreateSourceClaudeCodeSettings(elements.createProvider.value);
   elements.createModal.classList.remove('hidden');
 }
 
@@ -824,6 +859,7 @@ async function openEditModal(name) {
   document.getElementById('edit-provider').value = profile.provider;
   document.getElementById('edit-model').value = profile.model || '';
   updateEditModelHint();
+  updateEditSourceEffortHint(profile.provider);
 
   // 填充高级设置
   applyClaudeCodeSettingsToForm('edit', profile.claudeCodeSettings);
@@ -838,6 +874,10 @@ async function openEditModal(name) {
 function closeEditModal() {
   elements.editModal.classList.add('hidden');
   elements.editForm.dataset.editingName = '';
+  if (elements.editSourceEffortHint) {
+    elements.editSourceEffortHint.textContent = '';
+    elements.editSourceEffortHint.classList.add('hidden');
+  }
 }
 
 // 提交编辑配置
@@ -993,14 +1033,20 @@ async function init() {
   elements.createForm.addEventListener('submit', createProfile);
 
   // Provider 选择变化时更新模型提示
-  elements.createProvider.addEventListener('change', updateModelHint);
+  elements.createProvider.addEventListener('change', () => {
+    updateModelHint();
+    applyCreateSourceClaudeCodeSettings(elements.createProvider.value);
+  });
 
   // Profile 编辑弹窗
   document.getElementById('close-edit').addEventListener('click', closeEditModal);
   document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
   document.querySelector('#edit-modal .modal-overlay').addEventListener('click', closeEditModal);
   elements.editForm.addEventListener('submit', submitEditProfile);
-  elements.editProvider.addEventListener('change', updateEditModelHint);
+  elements.editProvider.addEventListener('change', () => {
+    updateEditModelHint();
+    updateEditSourceEffortHint(elements.editProvider.value);
+  });
 
   // Provider 创建/编辑弹窗
   document.getElementById('close-provider-modal').addEventListener('click', closeProviderModal);

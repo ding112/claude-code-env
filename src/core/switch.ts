@@ -1,7 +1,6 @@
 import { getActiveProfile, setActiveProfile, getProfile } from './profile.js';
 import { getProvider } from './provider.js';
 import { generateAllConfigs } from './configGenerator.js';
-import { getTemplate, type SourceTemplate } from './sourceTemplates.js';
 import type { Profile, Provider, EffectiveConfig, ProfileClaudeCodeSettings } from '../types/index.js';
 
 export interface SwitchResult {
@@ -49,8 +48,7 @@ export async function switchProfile(
       return result;
     }
 
-    const sourceTemplate = provider.source ? getTemplate(provider.source) : undefined;
-    const config = resolveConfig(profile, provider, sourceTemplate);
+    const config = resolveConfig(profile, provider);
     result.providerName = provider.name;
     result.model = config.model;
 
@@ -105,29 +103,9 @@ function compactClaudeCodeSettings(
     : undefined;
 }
 
-function mergeClaudeCodeSettings(
-  profileSettings?: ProfileClaudeCodeSettings,
-  sourceSettings?: ProfileClaudeCodeSettings
-): ProfileClaudeCodeSettings | undefined {
-  return compactClaudeCodeSettings({
-    defaultOpusModel: profileSettings?.defaultOpusModel ?? sourceSettings?.defaultOpusModel,
-    defaultSonnetModel: profileSettings?.defaultSonnetModel ?? sourceSettings?.defaultSonnetModel,
-    defaultHaikuModel: profileSettings?.defaultHaikuModel ?? sourceSettings?.defaultHaikuModel,
-    subagentModel: profileSettings?.subagentModel ?? sourceSettings?.subagentModel,
-    effortLevel: profileSettings?.effortLevel ?? sourceSettings?.effortLevel,
-  });
-}
-
-export function resolveConfig(
-  profile: Profile,
-  provider: Provider,
-  sourceTemplate?: SourceTemplate
-): EffectiveConfig {
+export function resolveConfig(profile: Profile, provider: Provider): EffectiveConfig {
   const model = profile.model || provider.defaultModel;
-  const claudeCodeSettings = mergeClaudeCodeSettings(
-    profile.claudeCodeSettings,
-    sourceTemplate?.claudeCodeSettings
-  );
+  const claudeCodeSettings = compactClaudeCodeSettings(profile.claudeCodeSettings);
 
   return {
     baseURL: provider.baseURL,

@@ -6,8 +6,6 @@ describe('source templates', () => {
     const template = getTemplate('deepseek');
 
     expect(template).toBeDefined();
-    expect(template?.claudeCodeSettings).toEqual({
-      effortLevel: 'medium',
-    });
+    expect(template?.claudeCodeSettings?.effortLevel).toBe('medium');
   });
 });

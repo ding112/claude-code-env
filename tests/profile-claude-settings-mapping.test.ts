@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeSourceInput } from '../src/commands/provider.js';
-import { sanitizeClaudeCodeSettingsInput } from '../src/commands/create.js';
+import {
+  sanitizeClaudeCodeSettingsInput,
+  getSourceTemplateClaudeCodeSettings,
+} from '../src/commands/create.js';
 
 describe('command input mappers', () => {
   it('maps empty strings to undefined for claude settings', () => {
@@ -24,5 +27,9 @@ describe('command input mappers', () => {
 
   it('falls back to custom for unsupported source value', () => {
     expect(sanitizeSourceInput('not-a-source')).toBe('custom');
+  });
+
+  it('loads source template claude settings defaults', () => {
+    expect(getSourceTemplateClaudeCodeSettings('deepseek')?.effortLevel).toBe('medium');
   });
 });

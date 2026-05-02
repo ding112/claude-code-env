@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveConfig } from '../src/core/switch.js';
 import type { Profile, Provider } from '../src/types/index.js';
-import type { SourceTemplate } from '../src/core/sourceTemplates.js';
 
 const provider: Provider = {
   name: 'deepseek-prod',
@@ -12,20 +11,6 @@ const provider: Provider = {
   apiKey: 'sk-test',
   models: ['deepseek-chat'],
   defaultModel: 'deepseek-chat',
-};
-
-const sourceTemplate: SourceTemplate = {
-  source: 'deepseek',
-  displayName: 'DeepSeek',
-  type: 'anthropic-compatible',
-  baseURL: 'https://api.deepseek.com/anthropic',
-  models: ['deepseek-v4-flash'],
-  defaultModel: 'deepseek-v4-flash',
-  description: 'DeepSeek template',
-  claudeCodeSettings: {
-    subagentModel: 'deepseek-reasoner',
-    effortLevel: 'medium',
-  },
 };
 
 describe('resolveConfig', () => {
@@ -60,24 +45,7 @@ describe('resolveConfig', () => {
     expect(resolved.claudeCodeSettings).toBeUndefined();
   });
 
-  it('falls back to source claudeCodeSettings and lets profile override fields', () => {
-    const profile: Profile = {
-      name: 'ds-mixed',
-      provider: 'deepseek-prod',
-      claudeCodeSettings: { effortLevel: 'high' },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const resolved = resolveConfig(profile, provider, sourceTemplate);
-    expect(resolved.source).toBe('deepseek');
-    expect(resolved.claudeCodeSettings).toEqual({
-      subagentModel: 'deepseek-reasoner',
-      effortLevel: 'high',
-    });
-  });
-
-  it('uses source claudeCodeSettings when profile has none', () => {
+  it('does not inherit source-level claudeCodeSettings defaults', () => {
     const profile: Profile = {
       name: 'ds-defaults',
       provider: 'deepseek-prod',
@@ -85,10 +53,8 @@ describe('resolveConfig', () => {
       updatedAt: new Date().toISOString(),
     };
 
-    const resolved = resolveConfig(profile, provider, sourceTemplate);
-    expect(resolved.claudeCodeSettings).toEqual({
-      subagentModel: 'deepseek-reasoner',
-      effortLevel: 'medium',
-    });
+    const resolved = resolveConfig(profile, provider);
+    expect(resolved.source).toBe('deepseek');
+    expect(resolved.claudeCodeSettings).toBeUndefined();
   });
 });

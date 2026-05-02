@@ -8,6 +8,7 @@
     "defaultModel": "deepseek-v4-flash",
     "description": "DeepSeek API — 兼容 anthropic 接口协议",
     "claudeCodeSettings": {
+      "defaultOpusModel": "deepseek-v4-flash",
       "effortLevel": "medium"
     }
   },
