@@ -27,6 +27,7 @@ const elements = {
   createForm: document.getElementById('create-form'),
   createProvider: document.getElementById('create-provider'),
   createModel: document.getElementById('create-model'),
+  createSourceEffortHint: document.getElementById('create-source-effort-hint'),
   // Profile edit modal
   editModal: document.getElementById('edit-modal'),
   editModalTitle: document.getElementById('edit-modal-title'),
@@ -345,6 +346,24 @@ function updateEditSourceEffortHint(providerName) {
   }
 
   hintEl.textContent = `Source 默认 effortLevel: ${sourceEffort}（仅提示，不自动应用）`;
+  hintEl.classList.remove('hidden');
+}
+
+function updateCreateSourceEffortHint(providerName) {
+  const hintEl = elements.createSourceEffortHint;
+  if (!hintEl) return;
+
+  const provider = providers.find(p => p.name === providerName);
+  const sourceTemplate = sourceTemplates.find(t => t.source === provider?.source);
+  const sourceEffort = sourceTemplate?.claudeCodeSettings?.effortLevel;
+
+  if (!sourceEffort) {
+    hintEl.textContent = '';
+    hintEl.classList.add('hidden');
+    return;
+  }
+
+  hintEl.textContent = `Source 默认 effortLevel: ${sourceEffort}（已自动填入）`;
   hintEl.classList.remove('hidden');
 }
 
@@ -834,7 +853,10 @@ async function deleteProvider(name) {
 function openCreateModal() {
   elements.createForm.reset();
   elements.createModel.placeholder = '选择 Provider 后可用';
-  applyCreateSourceClaudeCodeSettings(elements.createProvider.value);
+  if (elements.createSourceEffortHint) {
+    elements.createSourceEffortHint.textContent = '';
+    elements.createSourceEffortHint.classList.add('hidden');
+  }
   elements.createModal.classList.remove('hidden');
 }
 
@@ -1036,6 +1058,7 @@ async function init() {
   elements.createProvider.addEventListener('change', () => {
     updateModelHint();
     applyCreateSourceClaudeCodeSettings(elements.createProvider.value);
+    updateCreateSourceEffortHint(elements.createProvider.value);
   });
 
   // Profile 编辑弹窗

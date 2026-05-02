@@ -14,7 +14,7 @@ const provider: Provider = {
 };
 
 describe('resolveConfig', () => {
-  it('copies source and profile claudeCodeSettings', () => {
+  it('copies profile claudeCodeSettings to resolved config', () => {
     const profile: Profile = {
       name: 'ds-high',
       provider: 'deepseek-prod',
