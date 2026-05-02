@@ -30,6 +30,6 @@ describe('command input mappers', () => {
   });
 
   it('loads source template claude settings defaults', () => {
-    expect(getSourceTemplateClaudeCodeSettings('deepseek')?.effortLevel).toBe('medium');
+    expect(getSourceTemplateClaudeCodeSettings('deepseek')?.effortLevel).toBe('max');
   });
 });
