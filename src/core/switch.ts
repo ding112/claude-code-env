@@ -93,13 +93,7 @@ export async function switchProfile(
 
 export function resolveConfig(profile: Profile, provider: Provider): EffectiveConfig {
   const model = profile.model || provider.defaultModel;
-
-  // 处理 claudeCodeSettings：如果所有字段都是 undefined，则不返回该对象
-  const claudeCodeSettings =
-    profile.claudeCodeSettings &&
-    Object.values(profile.claudeCodeSettings).some((v) => v !== undefined)
-      ? profile.claudeCodeSettings
-      : undefined;
+  const { claudeCodeSettings } = profile;
 
   return {
     baseURL: provider.baseURL,
@@ -109,6 +103,9 @@ export function resolveConfig(profile: Profile, provider: Provider): EffectiveCo
     providerDisplayName: provider.displayName,
     isModelOverridden: !!profile.model,
     source: provider.source,
-    claudeCodeSettings,
+    claudeCodeSettings:
+      claudeCodeSettings && Object.values(claudeCodeSettings).some((v) => v !== undefined)
+        ? claudeCodeSettings
+        : undefined,
   };
 }

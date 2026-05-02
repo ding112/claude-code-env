@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeVendorInput } from '../src/commands/provider.js';
-import { sanitizeClaudeCodeSettingsInput } from '../src/commands/create.js';
+import { sanitizeSourceInput } from '../src/commands/provider.js';
+import {
+  sanitizeClaudeCodeSettingsInput,
+  getSourceTemplateClaudeCodeSettings,
+} from '../src/commands/create.js';
 
 describe('command input mappers', () => {
   it('maps empty strings to undefined for claude settings', () => {
@@ -18,11 +21,15 @@ describe('command input mappers', () => {
     });
   });
 
-  it('keeps supported vendor value', () => {
-    expect(sanitizeVendorInput('deepseek')).toBe('deepseek');
+  it('keeps supported source value', () => {
+    expect(sanitizeSourceInput('deepseek')).toBe('deepseek');
   });
 
-  it('falls back to custom for unsupported vendor value', () => {
-    expect(sanitizeVendorInput('not-a-vendor')).toBe('custom');
+  it('falls back to custom for unsupported source value', () => {
+    expect(sanitizeSourceInput('not-a-source')).toBe('custom');
+  });
+
+  it('loads source template claude settings defaults', () => {
+    expect(getSourceTemplateClaudeCodeSettings('deepseek')?.effortLevel).toBe('max');
   });
 });

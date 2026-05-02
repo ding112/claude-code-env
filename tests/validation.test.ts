@@ -50,6 +50,13 @@ describe('validateName', () => {
         error: 'Provider name 不能为空',
       });
     });
+
+    it('应拒绝超过 64 个字符的名称', () => {
+      expect(validateName('a'.repeat(65), 'Profile')).toEqual({
+        valid: false,
+        error: 'Profile name 长度不能超过 64 个字符',
+      });
+    });
   });
 
   describe('放宽的名称格式验证', () => {

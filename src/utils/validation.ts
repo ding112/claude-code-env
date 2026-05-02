@@ -19,6 +19,10 @@ export function validateName(name: string, type: string): { valid: boolean; erro
     return { valid: false, error: `${type} name 不能为空` };
   }
 
+  if (trimmed.length > 64) {
+    return { valid: false, error: `${type} name 长度不能超过 64 个字符` };
+  }
+
   // 检查路径遍历字符
   if (trimmed.includes('..') || trimmed.includes('/') || trimmed.includes('\\')) {
     return { valid: false, error: `${type} name 包含非法字符` };

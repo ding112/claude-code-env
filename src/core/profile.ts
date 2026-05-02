@@ -53,40 +53,53 @@ export function validateProfile(
 
   // Claude Code Settings 校验
   if (data.claudeCodeSettings !== undefined) {
-    const s = data.claudeCodeSettings;
-    if (s === null || typeof s !== 'object' || Array.isArray(s)) {
+    errors.push(...validateClaudeCodeSettings(data.claudeCodeSettings, 'claudeCodeSettings'));
+  }
+
+  return errors;
+}
+
+export function validateClaudeCodeSettings(
+  data: unknown,
+  fieldPrefix = 'claudeCodeSettings'
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    errors.push({
+      field: fieldPrefix,
+      message: `${fieldPrefix} 必须是对象`,
+    });
+    return errors;
+  }
+
+  const settings = data as ProfileClaudeCodeSettings;
+  const effortLevels = ['low', 'medium', 'high', 'max'] as const;
+  const stringFields: Array<keyof NonNullable<ProfileClaudeCodeSettings>> = [
+    'defaultOpusModel',
+    'defaultSonnetModel',
+    'defaultHaikuModel',
+    'subagentModel',
+  ];
+
+  for (const field of stringFields) {
+    const value = settings[field];
+    if (value !== undefined && typeof value !== 'string') {
       errors.push({
-        field: 'claudeCodeSettings',
-        message: 'claudeCodeSettings 必须是对象',
-      });
-      return errors;
-    }
-
-    const effortLevels = ['low', 'medium', 'high', 'max'] as const;
-
-    const stringFields: Array<keyof NonNullable<ProfileClaudeCodeSettings>> = [
-      'defaultOpusModel',
-      'defaultSonnetModel',
-      'defaultHaikuModel',
-      'subagentModel',
-    ];
-
-    for (const field of stringFields) {
-      const value = s[field];
-      if (value !== undefined && typeof value !== 'string') {
-        errors.push({
-          field: `claudeCodeSettings.${field}`,
-          message: `${field} 必须是字符串`,
-        });
-      }
-    }
-
-    if (s.effortLevel !== undefined && !effortLevels.includes(s.effortLevel as typeof effortLevels[number])) {
-      errors.push({
-        field: 'claudeCodeSettings.effortLevel',
-        message: `effortLevel 必须是: ${effortLevels.join(', ')}`,
+        field: `${fieldPrefix}.${field}`,
+        message: `${field} 必须是字符串`,
       });
     }
+  }
+
+  if (
+    settings.effortLevel !== undefined &&
+    !effortLevels.includes(settings.effortLevel as typeof effortLevels[number])
+  ) {
+    errors.push({
+      field: `${fieldPrefix}.effortLevel`,
+      message: `effortLevel 必须是: ${effortLevels.join(', ')}`,
+    });
   }
 
   return errors;

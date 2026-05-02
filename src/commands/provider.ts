@@ -94,12 +94,8 @@ export async function providerAddCommand(): Promise<void> {
         name: 'name',
         message: '配置名称:',
         validate: (input: string) => {
-          const trimmed = input.trim();
-          if (!trimmed) return '配置名称不能为空';
-          if (trimmed.includes('..') || trimmed.includes('/') || trimmed.includes('\\')) {
-            return '配置名称包含非法字符';
-          }
-          return true;
+          const validation = validateName(input, 'Provider');
+          return validation.valid ? true : (validation.error ?? '配置名称无效');
         },
       },
       {

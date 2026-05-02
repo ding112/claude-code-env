@@ -8,6 +8,7 @@ export type ProviderType = 'openai-compatible' | 'anthropic-compatible' | 'custo
 // Source 类型（配置来源标识）
 export type SourceType =
   | 'deepseek'
+  | 'mimo'
   | 'volcengine'
   | 'tencent'
   | 'alibaba'
@@ -17,6 +18,7 @@ export type SourceType =
 
 export const validSources: SourceType[] = [
   'deepseek',
+  'mimo',
   'volcengine',
   'tencent',
   'alibaba',

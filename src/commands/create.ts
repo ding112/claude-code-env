@@ -1,8 +1,14 @@
 import inquirer from 'inquirer';
 import { logger } from '../utils/logger.js';
-import type { Profile, ProfileClaudeCodeSettings, ClaudeCodeEffortLevel } from '../types/index.js';
+import type {
+  Profile,
+  ProfileClaudeCodeSettings,
+  ClaudeCodeEffortLevel,
+  SourceType,
+} from '../types/index.js';
 import { saveProfile, getProfile } from '../core/profile.js';
 import { listProviders } from '../core/provider.js';
+import { getTemplate } from '../core/sourceTemplates.js';
 
 // ============================================================================
 // Helper Functions
@@ -31,6 +37,15 @@ export function sanitizeClaudeCodeSettingsInput(input: {
   };
 
   return Object.values(settings).some((v) => v !== undefined) ? settings : undefined;
+}
+
+export function getSourceTemplateClaudeCodeSettings(
+  source?: SourceType
+): ProfileClaudeCodeSettings | undefined {
+  if (!source) {
+    return undefined;
+  }
+  return getTemplate(source)?.claudeCodeSettings;
 }
 
 // ============================================================================
@@ -80,13 +95,16 @@ export async function createCommand(name: string): Promise<void> {
       },
     ]);
 
+    const selectedProvider = providers.find(p => p.name === answers.provider);
+    if (!selectedProvider) {
+      console.log('❌ Provider 未找到');
+      process.exit(1);
+    }
+
+    const sourceDefaults = getSourceTemplateClaudeCodeSettings(selectedProvider.source);
+
     let model: string | undefined;
     if (answers.overrideModel) {
-      const selectedProvider = providers.find(p => p.name === answers.provider);
-      if (!selectedProvider) {
-        console.log('❌ Provider 未找到');
-        process.exit(1);
-      }
 
       const { selectedModel } = await inquirer.prompt([
         {
@@ -107,8 +125,10 @@ export async function createCommand(name: string): Promise<void> {
       {
         type: 'confirm',
         name: 'configureAdvanced',
-        message: '是否配置 Claude Code 高级设置?',
-        default: false,
+        message: sourceDefaults?.effortLevel
+          ? `是否配置 Claude Code 高级设置? (Source 默认 effortLevel: ${sourceDefaults.effortLevel})`
+          : '是否配置 Claude Code 高级设置?',
+        default: !!sourceDefaults,
       },
     ]);
 
@@ -119,27 +139,32 @@ export async function createCommand(name: string): Promise<void> {
           type: 'input',
           name: 'defaultOpusModel',
           message: '默认 Opus 模型 (可选):',
+          default: sourceDefaults?.defaultOpusModel || '',
         },
         {
           type: 'input',
           name: 'defaultSonnetModel',
           message: '默认 Sonnet 模型 (可选):',
+          default: sourceDefaults?.defaultSonnetModel || '',
         },
         {
           type: 'input',
           name: 'defaultHaikuModel',
           message: '默认 Haiku 模型 (可选):',
+          default: sourceDefaults?.defaultHaikuModel || '',
         },
         {
           type: 'input',
           name: 'subagentModel',
           message: 'Subagent 模型 (可选):',
+          default: sourceDefaults?.subagentModel || '',
         },
         {
           type: 'list',
           name: 'effortLevel',
           message: 'Effort Level (可选):',
           choices: [{ name: '不设置', value: '' }, ...EFFORT_LEVEL_OPTIONS],
+          default: sourceDefaults?.effortLevel || '',
         },
       ]);
 

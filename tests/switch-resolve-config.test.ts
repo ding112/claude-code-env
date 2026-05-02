@@ -5,8 +5,8 @@ import type { Profile, Provider } from '../src/types/index.js';
 const provider: Provider = {
   name: 'deepseek-prod',
   displayName: 'DeepSeek Prod',
-  type: 'openai-compatible',
-  vendor: 'deepseek',
+  type: 'anthropic-compatible',
+  source: 'deepseek',
   baseURL: 'https://api.deepseek.com',
   apiKey: 'sk-test',
   models: ['deepseek-chat'],
@@ -14,7 +14,7 @@ const provider: Provider = {
 };
 
 describe('resolveConfig', () => {
-  it('copies vendor and profile claudeCodeSettings', () => {
+  it('copies profile claudeCodeSettings to resolved config', () => {
     const profile: Profile = {
       name: 'ds-high',
       provider: 'deepseek-prod',
@@ -25,7 +25,7 @@ describe('resolveConfig', () => {
     };
 
     const resolved = resolveConfig(profile, provider);
-    expect(resolved.vendor).toBe('deepseek');
+    expect(resolved.source).toBe('deepseek');
     expect(resolved.claudeCodeSettings).toEqual({
       subagentModel: 'deepseek-reasoner',
       effortLevel: 'high',
@@ -42,6 +42,19 @@ describe('resolveConfig', () => {
     };
 
     const resolved = resolveConfig(profile, provider);
+    expect(resolved.claudeCodeSettings).toBeUndefined();
+  });
+
+  it('does not inherit source-level claudeCodeSettings defaults', () => {
+    const profile: Profile = {
+      name: 'ds-defaults',
+      provider: 'deepseek-prod',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const resolved = resolveConfig(profile, provider);
+    expect(resolved.source).toBe('deepseek');
     expect(resolved.claudeCodeSettings).toBeUndefined();
   });
 });
