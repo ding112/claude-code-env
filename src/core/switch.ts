@@ -1,7 +1,8 @@
 import { getActiveProfile, setActiveProfile, getProfile } from './profile.js';
 import { getProvider } from './provider.js';
 import { generateAllConfigs } from './configGenerator.js';
-import type { Profile, Provider, EffectiveConfig } from '../types/index.js';
+import { getTemplate, type SourceTemplate } from './sourceTemplates.js';
+import type { Profile, Provider, EffectiveConfig, ProfileClaudeCodeSettings } from '../types/index.js';
 
 export interface SwitchResult {
   success: boolean;
@@ -48,7 +49,8 @@ export async function switchProfile(
       return result;
     }
 
-    const config = resolveConfig(profile, provider);
+    const sourceTemplate = provider.source ? getTemplate(provider.source) : undefined;
+    const config = resolveConfig(profile, provider, sourceTemplate);
     result.providerName = provider.name;
     result.model = config.model;
 
@@ -91,15 +93,41 @@ export async function switchProfile(
   }
 }
 
-export function resolveConfig(profile: Profile, provider: Provider): EffectiveConfig {
-  const model = profile.model || provider.defaultModel;
+function compactClaudeCodeSettings(
+  settings?: ProfileClaudeCodeSettings
+): ProfileClaudeCodeSettings | undefined {
+  if (!settings) {
+    return undefined;
+  }
 
-  // 处理 claudeCodeSettings：如果所有字段都是 undefined，则不返回该对象
-  const claudeCodeSettings =
-    profile.claudeCodeSettings &&
-    Object.values(profile.claudeCodeSettings).some((v) => v !== undefined)
-      ? profile.claudeCodeSettings
-      : undefined;
+  return Object.values(settings).some((value) => value !== undefined)
+    ? settings
+    : undefined;
+}
+
+function mergeClaudeCodeSettings(
+  profileSettings?: ProfileClaudeCodeSettings,
+  sourceSettings?: ProfileClaudeCodeSettings
+): ProfileClaudeCodeSettings | undefined {
+  return compactClaudeCodeSettings({
+    defaultOpusModel: profileSettings?.defaultOpusModel ?? sourceSettings?.defaultOpusModel,
+    defaultSonnetModel: profileSettings?.defaultSonnetModel ?? sourceSettings?.defaultSonnetModel,
+    defaultHaikuModel: profileSettings?.defaultHaikuModel ?? sourceSettings?.defaultHaikuModel,
+    subagentModel: profileSettings?.subagentModel ?? sourceSettings?.subagentModel,
+    effortLevel: profileSettings?.effortLevel ?? sourceSettings?.effortLevel,
+  });
+}
+
+export function resolveConfig(
+  profile: Profile,
+  provider: Provider,
+  sourceTemplate?: SourceTemplate
+): EffectiveConfig {
+  const model = profile.model || provider.defaultModel;
+  const claudeCodeSettings = mergeClaudeCodeSettings(
+    profile.claudeCodeSettings,
+    sourceTemplate?.claudeCodeSettings
+  );
 
   return {
     baseURL: provider.baseURL,

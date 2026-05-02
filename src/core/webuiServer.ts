@@ -1,6 +1,7 @@
 import path from 'path';
 import express from 'express';
 import { logger } from '../utils/logger.js';
+import { validateName } from '../utils/validation.js';
 import { listProfiles, getProfile, saveProfile, deleteProfile, getActiveProfile } from './profile.js';
 import { listProviders, getProvider, saveProvider, deleteProvider, isProviderInUse, getProviderUsage } from './provider.js';
 import { switchProfile } from './switch.js';
@@ -168,15 +169,9 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         return;
       }
 
-      // 验证名称格式，防止路径遍历攻击
-      if (name.includes('..') || name.includes('/') || name.includes('\\')) {
-        res.status(400).json({ error: '名称包含非法字符' });
-        return;
-      }
-
-      // 验证名称长度
-      if (name.length > 64) {
-        res.status(400).json({ error: '名称长度不能超过64个字符' });
+      const nameValidation = validateName(name, 'Profile');
+      if (!nameValidation.valid) {
+        res.status(400).json({ error: nameValidation.error });
         return;
       }
 
@@ -406,15 +401,9 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         return;
       }
 
-      // 验证名称格式，防止路径遍历攻击
-      if (name.includes('..') || name.includes('/') || name.includes('\\')) {
-        res.status(400).json({ error: '名称包含非法字符' });
-        return;
-      }
-
-      // 验证名称长度
-      if (name.length > 64) {
-        res.status(400).json({ error: '名称长度不能超过64个字符' });
+      const nameValidation = validateName(name, 'Provider');
+      if (!nameValidation.valid) {
+        res.status(400).json({ error: nameValidation.error });
         return;
       }
 
@@ -608,6 +597,7 @@ export async function startWebUI(options: WebUIServerOptions = {}): Promise<void
         models: tmpl.models,
         defaultModel: tmpl.defaultModel,
         description: tmpl.description,
+        claudeCodeSettings: tmpl.claudeCodeSettings,
       }));
       res.json({ templates });
     } catch (error) {

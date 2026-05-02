@@ -1,9 +1,14 @@
 import fs from 'fs';
-import type { SourceType, ProviderType } from '../types/index.js';
+import type {
+  SourceType,
+  ProviderType,
+  ProfileClaudeCodeSettings,
+} from '../types/index.js';
 import { validSources } from '../types/index.js';
 import { SOURCES_USER_FILE } from './config.js';
 import { logger } from '../utils/logger.js';
 import builtinSources from './sources.json';
+import { validateClaudeCodeSettings } from './profile.js';
 
 // ============================================================================
 // Source Template 定义
@@ -17,6 +22,7 @@ export interface SourceTemplate {
   models: string[];
   defaultModel: string;
   description: string;
+  claudeCodeSettings?: ProfileClaudeCodeSettings;
 }
 
 // ============================================================================
@@ -40,7 +46,11 @@ function isValidSourceTemplate(obj: unknown): obj is SourceTemplate {
     Array.isArray(t.models) &&
     t.models.every((m: unknown) => typeof m === 'string') &&
     typeof t.defaultModel === 'string' &&
-    typeof t.description === 'string'
+    typeof t.description === 'string' &&
+    (
+      t.claudeCodeSettings === undefined ||
+      validateClaudeCodeSettings(t.claudeCodeSettings, 'claudeCodeSettings').length === 0
+    )
   );
 }
 

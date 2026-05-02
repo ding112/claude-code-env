@@ -6,7 +6,10 @@
     "baseURL": "https://api.deepseek.com/anthropic",
     "models": ["deepseek-v4-flash", "deepseek-v4-pro[1m]"],
     "defaultModel": "deepseek-v4-flash",
-    "description": "DeepSeek API — 兼容 anthropic 接口协议"
+    "description": "DeepSeek API — 兼容 anthropic 接口协议",
+    "claudeCodeSettings": {
+      "effortLevel": "medium"
+    }
   },
   "volcengine": {
     "source": "volcengine",
