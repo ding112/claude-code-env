@@ -331,8 +331,7 @@ function updateEditModelHint() {
   }
 }
 
-function updateEditSourceEffortHint(providerName) {
-  const hintEl = elements.editSourceEffortHint;
+function updateSourceEffortHint(hintEl, providerName, suffix) {
   if (!hintEl) return;
 
   const provider = providers.find(p => p.name === providerName);
@@ -345,26 +344,16 @@ function updateEditSourceEffortHint(providerName) {
     return;
   }
 
-  hintEl.textContent = `Source 默认 effortLevel: ${sourceEffort}（仅提示，不自动应用）`;
+  hintEl.textContent = `Source 默认 effortLevel: ${sourceEffort}${suffix}`;
   hintEl.classList.remove('hidden');
 }
 
+function updateEditSourceEffortHint(providerName) {
+  updateSourceEffortHint(elements.editSourceEffortHint, providerName, '（仅提示，不自动应用）');
+}
+
 function updateCreateSourceEffortHint(providerName) {
-  const hintEl = elements.createSourceEffortHint;
-  if (!hintEl) return;
-
-  const provider = providers.find(p => p.name === providerName);
-  const sourceTemplate = sourceTemplates.find(t => t.source === provider?.source);
-  const sourceEffort = sourceTemplate?.claudeCodeSettings?.effortLevel;
-
-  if (!sourceEffort) {
-    hintEl.textContent = '';
-    hintEl.classList.add('hidden');
-    return;
-  }
-
-  hintEl.textContent = `Source 默认 effortLevel: ${sourceEffort}（已自动填入）`;
-  hintEl.classList.remove('hidden');
+  updateSourceEffortHint(elements.createSourceEffortHint, providerName, '（已自动填入）');
 }
 
 function getSourceClaudeCodeSettingsForProvider(providerName) {
