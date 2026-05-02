@@ -1,7 +1,7 @@
 import { getActiveProfile, setActiveProfile, getProfile } from './profile.js';
 import { getProvider } from './provider.js';
 import { generateAllConfigs } from './configGenerator.js';
-import type { Profile, Provider, EffectiveConfig, ProfileClaudeCodeSettings } from '../types/index.js';
+import type { Profile, Provider, EffectiveConfig } from '../types/index.js';
 
 export interface SwitchResult {
   success: boolean;
@@ -91,21 +91,9 @@ export async function switchProfile(
   }
 }
 
-function compactClaudeCodeSettings(
-  settings?: ProfileClaudeCodeSettings
-): ProfileClaudeCodeSettings | undefined {
-  if (!settings) {
-    return undefined;
-  }
-
-  return Object.values(settings).some((value) => value !== undefined)
-    ? settings
-    : undefined;
-}
-
 export function resolveConfig(profile: Profile, provider: Provider): EffectiveConfig {
   const model = profile.model || provider.defaultModel;
-  const claudeCodeSettings = compactClaudeCodeSettings(profile.claudeCodeSettings);
+  const { claudeCodeSettings } = profile;
 
   return {
     baseURL: provider.baseURL,
@@ -115,6 +103,9 @@ export function resolveConfig(profile: Profile, provider: Provider): EffectiveCo
     providerDisplayName: provider.displayName,
     isModelOverridden: !!profile.model,
     source: provider.source,
-    claudeCodeSettings,
+    claudeCodeSettings:
+      claudeCodeSettings && Object.values(claudeCodeSettings).some((v) => v !== undefined)
+        ? claudeCodeSettings
+        : undefined,
   };
 }
